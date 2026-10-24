@@ -1,82 +1,252 @@
 /**
- * maps.js — Leaflet Map Initialization, Station Pins & Hotspot Layers
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
+ * maps.js — Interactive 77-Province Thailand Map, Station Radius & Before/After Swipe
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
 import { getState, setState } from './state.js';
+import { getDb, getThailandGeoJson } from './data-loader.js';
+import { calculateMean, formatNum, formatInt } from './calculations.js';
 
-// Default center of Northern/Western Highland study area
-export const DEFAULT_CENTER = [17.5, 99.2];
-export const DEFAULT_ZOOM = 7;
+// Center of Thailand showing full 77 provinces
+export const THAILAND_CENTER = [15.2, 100.5];
+export const THAILAND_ZOOM = 6;
+
+// Study area default center
+export const HIGHLAND_CENTER = [17.5, 99.2];
+export const HIGHLAND_ZOOM = 7;
+
+export const STUDY_PROVINCES = [
+  'กาญจนบุรี', 'กำแพงเพชร', 'ตาก', 'น่าน', 'พิษณุโลก',
+  'เชียงราย', 'เชียงใหม่', 'เพชรบูรณ์', 'แม่ฮ่องสอน'
+];
+
+export const STUDY_PROVINCES_EN = [
+  'kanchanaburi', 'kamphaeng phet', 'tak', 'nan', 'phitsanulok',
+  'chiang rai', 'chiang mai', 'phetchabun', 'mae hong son'
+];
 
 /**
- * Initialize a Leaflet map with standard tiles and attribution
- * @param {string} containerId DOM ID of container
- * @param {Object} options Leaflet map options
- * @returns {L.Map}
+ * Check if a GeoJSON feature is one of the 9 study provinces
+ */
+export function isStudyProvince(feature) {
+  if (!feature || !feature.properties) return false;
+  const pTh = feature.properties.pro_th || '';
+  const pEn = (feature.properties.pro_en || '').toLowerCase().trim();
+  return STUDY_PROVINCES.includes(pTh) || STUDY_PROVINCES_EN.includes(pEn);
+}
+
+/**
+ * Get standardized Thai province name from feature
+ */
+export function getFeatureProvinceName(feature) {
+  if (!feature || !feature.properties) return '';
+  const pTh = feature.properties.pro_th;
+  if (pTh && STUDY_PROVINCES.includes(pTh)) return pTh;
+  const pEn = (feature.properties.pro_en || '').toLowerCase().trim();
+  const idx = STUDY_PROVINCES_EN.indexOf(pEn);
+  if (idx !== -1) return STUDY_PROVINCES[idx];
+  return pTh || feature.properties.pro_en || '';
+}
+
+/**
+ * Initialize a Leaflet map with standard tiles
+ * Completely free, no paid API keys required
  */
 export function initLeafletMap(containerId, options = {}) {
   if (typeof L === 'undefined') {
-    console.error('Leaflet library is not loaded');
+    console.error('Leaflet is not loaded');
     return null;
   }
 
   const container = document.getElementById(containerId);
   if (!container) return null;
 
-  // Clean up existing Leaflet map if attached to this container
   if (container._leaflet_id && container._leaflet_map) {
     try {
       container._leaflet_map.remove();
     } catch (e) {
-      console.warn('Error removing previous map instance:', e);
+      console.warn('Error removing map instance:', e);
     }
   }
 
   const map = L.map(containerId, {
-    center: DEFAULT_CENTER,
-    zoom: DEFAULT_ZOOM,
+    center: HIGHLAND_CENTER,
+    zoom: HIGHLAND_ZOOM,
     minZoom: 5,
     maxZoom: 16,
-    zoomControl: true,
+    zoomControl: false,
     attributionControl: true,
     ...options
   });
 
+  // Position zoom control top-left
+  L.control.zoom({ position: 'topleft' }).addTo(map);
+
   container._leaflet_map = map;
 
-  // Primary Basemap: CartoDB Positron (light, clear for data viz)
-  const positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  // CartoDB Dark/Matter or Positron basemap for dark intelligence theme
+  const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
     subdomains: 'abcd',
     maxZoom: 19
   });
 
-  // Secondary/Fallback Basemap: OpenStreetMap Standard
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19
   });
 
-  positron.addTo(map);
-
-  L.control.layers({
-    'แผนที่สว่าง (CartoDB Light)': positron,
-    'แผนที่ภูมิศาสตร์ (OSM)': osm
-  }, null, { position: 'topright' }).addTo(map);
+  darkTiles.addTo(map);
 
   return map;
 }
 
 /**
- * Render 50 HRDI station markers on the map
- * @param {L.Map} map 
- * @param {Array} stations Array of station objects
- * @param {string|null} selectedStationId Currently selected station ID
- * @param {Function} onSelectStation Callback on click
- * @returns {L.LayerGroup}
+ * Render the full 77-province Thailand map with the 9 study provinces highlighted
  */
-export function renderStationMarkers(map, stations, selectedStationId = null, onSelectStation = null) {
+export function renderThailandProvinceMap(map, options = {}) {
+  const geojson = getThailandGeoJson();
+  if (!map || !geojson) return null;
+
+  const state = getState();
+  const db = getDb();
+  const { onSelectProvince, metric = 'temp', year = null } = options;
+
+  // Precalculate province statistics for choropleth styling
+  const provStats = new Map();
+  const targetYear = year || (state.yearMode === 'compare' ? 2022 : Number(state.yearMode));
+
+  for (const prov of STUDY_PROVINCES) {
+    const hrdiRows = db.hrdiStationMonth.filter(r =>
+      r.province === prov && r.year === targetYear && state.selectedMonths.includes(r.month)
+    );
+    const meanTemp = calculateMean(hrdiRows, 'temp').mean;
+    const meanRain = calculateMean(hrdiRows, 'rainfall').mean;
+    const stations = db.stations.filter(s => s.province === prov);
+
+    const hsCount = db.hotspotProvinceMonth.reduce((sum, r) => {
+      if (r.province === prov && r.year === targetYear && state.selectedMonths.includes(r.month)) {
+        return sum + (r.count || 0);
+      }
+      return sum;
+    }, 0);
+
+    provStats.set(prov, {
+      province: prov,
+      meanTemp,
+      meanRain,
+      stationsCount: stations.length,
+      stations,
+      hotspotCount: hsCount
+    });
+  }
+
+  // Study province color scales
+  const getChoroplethColor = (val, metricType) => {
+    if (val === null || val === undefined) return '#0d9488';
+    if (metricType === 'temp') {
+      return val > 26 ? '#ef4444' : val > 24 ? '#f59e0b' : val > 22 ? '#06b6d4' : '#0d9488';
+    } else if (metricType === 'rainfall') {
+      return val > 150 ? '#0284c7' : val > 100 ? '#06b6d4' : val > 50 ? '#14b8a6' : '#99f6e4';
+    } else {
+      return val > 5000 ? '#b91c1c' : val > 2000 ? '#ea580c' : val > 500 ? '#f59e0b' : '#14b8a6';
+    }
+  };
+
+  const geoLayer = L.geoJSON(geojson, {
+    style: (feature) => {
+      const isStudy = isStudyProvince(feature);
+      const provName = getFeatureProvinceName(feature);
+      const isSelected = state.province === provName;
+
+      if (!isStudy) {
+        // Non-study provinces: muted solid blue-grey, subtle outline, non-clickable
+        return {
+          fillColor: '#1e293b',
+          fillOpacity: 0.55,
+          color: '#334155',
+          weight: 0.7,
+          className: 'province-non-study'
+        };
+      }
+
+      // Study provinces: elegant teal/cyan data-driven styling
+      const stat = provStats.get(provName);
+      const metricVal = metric === 'rainfall' ? stat?.meanRain
+        : metric === 'hotspots' ? stat?.hotspotCount
+        : stat?.meanTemp;
+
+      const baseColor = getChoroplethColor(metricVal, metric);
+
+      return {
+        fillColor: isSelected ? '#06b6d4' : baseColor,
+        fillOpacity: isSelected ? 0.85 : 0.65,
+        color: isSelected ? '#ffffff' : '#38bdf8',
+        weight: isSelected ? 2.5 : 1.2,
+        dashArray: isSelected ? '' : '',
+        className: 'province-study-interactive'
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      const isStudy = isStudyProvince(feature);
+      const provName = getFeatureProvinceName(feature);
+
+      if (!isStudy) {
+        // Non-study province: no tooltip, non-clickable
+        layer.options.interactive = false;
+        return;
+      }
+
+      // Study province: interactive tooltips and click handling
+      const stat = provStats.get(provName);
+      const tooltipContent = `
+        <div style="font-family: var(--font-family); font-size: 0.82rem; padding: 2px;">
+          <strong style="color: #0f172a; font-size: 0.9rem;">จังหวัด${provName}</strong><br>
+          <span style="color: #0d9488; font-weight: 600;">สถานี HRDI: ${stat?.stationsCount || 0} สถานี</span><br>
+          <span>อุณหภูมิเฉลี่ย: ${formatNum(stat?.meanTemp, 1)} °C</span><br>
+          <span>ปริมาณฝนเฉลี่ย: ${formatNum(stat?.meanRain, 1)} มม.</span><br>
+          <span>จุดความร้อนตรวจพบ: ${formatInt(stat?.hotspotCount)} รายการ</span>
+        </div>
+      `;
+
+      layer.bindTooltip(tooltipContent, {
+        sticky: true,
+        className: 'custom-map-tooltip'
+      });
+
+      layer.on({
+        mouseover: (e) => {
+          const l = e.target;
+          l.setStyle({
+            fillOpacity: 0.9,
+            weight: 2.2,
+            color: '#38bdf8'
+          });
+          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+            l.bringToFront();
+          }
+        },
+        mouseout: (e) => {
+          geoLayer.resetStyle(e.target);
+        },
+        click: () => {
+          if (onSelectProvince) {
+            onSelectProvince(provName, stat);
+          } else {
+            setState({ province: provName });
+          }
+        }
+      });
+    }
+  }).addTo(map);
+
+  return geoLayer;
+}
+
+/**
+ * Render 50 HRDI Station Markers with real coordinates and accurate 10 km Radius Circle
+ */
+export function renderStationMarkersWithRadius(map, stations, selectedStationId = null, onSelectStation = null) {
   if (!map || !stations) return null;
 
   const layerGroup = L.layerGroup().addTo(map);
@@ -86,67 +256,76 @@ export function renderStationMarkers(map, stations, selectedStationId = null, on
 
     const isSelected = selectedStationId === s.station_id;
 
-    // Distinct SVG marker for station
+    // Custom SVG marker pin
+    const pinSize = isSelected ? 22 : 14;
     const markerHtml = `
-      <div style="
-        width: ${isSelected ? '24px' : '16px'};
-        height: ${isSelected ? '24px' : '16px'};
-        background-color: ${isSelected ? '#0d9488' : '#2563eb'};
+      <div class="station-map-pin ${isSelected ? 'selected' : ''}" style="
+        width: ${pinSize}px;
+        height: ${pinSize}px;
+        background: ${isSelected ? 'linear-gradient(135deg, #06b6d4, #0d9488)' : '#0284c7'};
         border: 2px solid #ffffff;
         border-radius: 50%;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         cursor: pointer;
-        transition: transform 0.2s;
         display: flex;
         align-items: center;
         justify-content: center;
       ">
-        <div style="width: 6px; height: 6px; background: #ffffff; border-radius: 50%;"></div>
+        <div style="width: ${isSelected ? '6px' : '4px'}; height: ${isSelected ? '6px' : '4px'}; background: #ffffff; border-radius: 50%;"></div>
       </div>
     `;
 
     const icon = L.divIcon({
       html: markerHtml,
-      className: 'custom-station-pin',
-      iconSize: [isSelected ? 24 : 16, isSelected ? 24 : 16],
-      iconAnchor: [isSelected ? 12 : 8, isSelected ? 12 : 8]
+      className: 'station-icon-wrapper',
+      iconSize: [pinSize, pinSize],
+      iconAnchor: [pinSize / 2, pinSize / 2]
     });
 
     const marker = L.marker([s.lat, s.lon], { icon }).addTo(layerGroup);
 
-    // Popup content with real station metadata
-    const popupHtml = `
-      <div style="font-family: var(--font-family); min-width: 200px;">
-        <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.9rem;">
-          📍 ${escapeHtml(s.station_name)}
-        </div>
-        <div style="font-size: 0.78rem; color: #475569; line-height: 1.4;">
-          <div><strong>จังหวัด:</strong> ${escapeHtml(s.province)}</div>
-          <div><strong>อำเภอ:</strong> ${escapeHtml(s.district || '-')}</div>
-          <div><strong>ตำบล:</strong> ${escapeHtml(s.tambon || '-')}</div>
-          <div><strong>พิกัด:</strong> ${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</div>
-          <div><strong>แหล่งตรวจวัด:</strong> ${escapeHtml(s.source_type || 'HRDI')}</div>
+    // If this station is selected, draw geographically accurate 10 km radius circle
+    if (isSelected) {
+      const radiusCircle = L.circle([s.lat, s.lon], {
+        radius: 10000, // 10,000 meters = 10 km geodesic radius
+        color: '#06b6d4',
+        weight: 1.5,
+        fillColor: '#0d9488',
+        fillOpacity: 0.15,
+        dashArray: '4, 4'
+      }).addTo(layerGroup);
+
+      radiusCircle.bindTooltip('รัศมี 10 กิโลเมตรรอบสถานี HRDI', { permanent: false, sticky: true });
+    }
+
+    marker.bindPopup(`
+      <div style="font-family: var(--font-family); min-width: 210px; font-size: 0.82rem; line-height: 1.5;">
+        <strong style="font-size: 0.9rem; color: #0f172a;">${escapeHtml(s.station_name)}</strong>
+        <div style="color: #64748b; margin-top: 3px;">
+          <div>จังหวัด: <strong>${escapeHtml(s.province)}</strong></div>
+          <div>อำเภอ: ${escapeHtml(s.district || '-')}</div>
+          <div>ตำบล: ${escapeHtml(s.tambon || '-')}</div>
+          <div>พิกัด: ${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</div>
+          <div>แหล่งตรวจวัด: ${escapeHtml(s.source_type || 'HRDI')}</div>
         </div>
         <div style="margin-top: 8px;">
-          <button class="popup-btn-filter" style="
+          <button id="btn-popup-select-station" style="
+            width: 100%;
+            padding: 5px 8px;
             background: #0d9488;
             color: #ffffff;
             border: none;
-            padding: 4px 10px;
             border-radius: 4px;
             font-size: 0.75rem;
-            cursor: pointer;
             font-weight: 600;
-            width: 100%;
-          ">กรองข้อมูลเฉพาะสถานีนี้</button>
+            cursor: pointer;
+          ">กรองข้อมูลและแสดงรัศมี 10 กม.</button>
         </div>
       </div>
-    `;
-
-    marker.bindPopup(popupHtml);
+    `);
 
     marker.on('popupopen', () => {
-      const btn = document.querySelector('.popup-btn-filter');
+      const btn = document.getElementById('btn-popup-select-station');
       if (btn) {
         btn.onclick = () => {
           if (onSelectStation) {
@@ -167,15 +346,95 @@ export function renderStationMarkers(map, stations, selectedStationId = null, on
 }
 
 /**
- * Render satellite hotspot detection markers / clusters
- * @param {L.Map} map 
- * @param {Array} events Normalized hotspot event records
- * @returns {L.Layer}
+ * Setup Draggable Before/After Map Swipe Divider (2022 vs 2023)
+ */
+export function setupMapSwipeComparison(containerId, map, leftLayer, rightLayer) {
+  const container = document.getElementById(containerId);
+  if (!container || !map) return null;
+
+  let existingDivider = container.querySelector('.map-swipe-divider');
+  if (existingDivider) existingDivider.remove();
+
+  const divider = document.createElement('div');
+  divider.className = 'map-swipe-divider';
+  divider.innerHTML = `
+    <div class="swipe-handle">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"></polyline>
+        <polyline points="9 18 3 12 9 6"></polyline>
+      </svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="9 18 15 12 9 6"></polyline>
+        <polyline points="15 18 21 12 15 6"></polyline>
+      </svg>
+    </div>
+  `;
+  container.appendChild(divider);
+
+  let isDragging = false;
+  let currentPercent = 50;
+
+  function updateClip(percent) {
+    currentPercent = Math.max(5, Math.min(95, percent));
+    divider.style.left = `${currentPercent}%`;
+
+    // Clip left layer (2022) to [0, currentPercent]
+    if (leftLayer && leftLayer.getContainer) {
+      const leftPane = leftLayer.getContainer();
+      if (leftPane) {
+        leftPane.style.clipPath = `polygon(0 0, ${currentPercent}% 0, ${currentPercent}% 100%, 0 100%)`;
+      }
+    }
+
+    // Clip right layer (2023) to [currentPercent, 100]
+    if (rightLayer && rightLayer.getContainer) {
+      const rightPane = rightLayer.getContainer();
+      if (rightPane) {
+        rightPane.style.clipPath = `polygon(${currentPercent}% 0, 100% 0, 100% 100%, ${currentPercent}% 100%)`;
+      }
+    }
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging) return;
+    const rect = container.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    if (!clientX) return;
+    const percent = ((clientX - rect.left) / rect.width) * 100;
+    updateClip(percent);
+  }
+
+  function onPointerUp() {
+    isDragging = false;
+    document.removeEventListener('mousemove', onPointerMove);
+    document.removeEventListener('mouseup', onPointerUp);
+    document.removeEventListener('touchmove', onPointerMove);
+    document.removeEventListener('touchend', onPointerUp);
+  }
+
+  divider.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    e.preventDefault();
+    document.addEventListener('mousemove', onPointerMove);
+    document.addEventListener('mouseup', onPointerUp);
+  });
+
+  divider.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    document.addEventListener('touchmove', onPointerMove);
+    document.addEventListener('touchend', onPointerUp);
+  });
+
+  updateClip(50);
+  return { updateClip, destroy: () => divider.remove() };
+}
+
+/**
+ * Render Hotspot layer with Clustering
  */
 export function renderHotspotLayer(map, events) {
   if (!map || !events) return null;
 
-  // Use MarkerClusterGroup if plugin is available, otherwise CircleMarker group
   let clusterGroup;
   if (typeof L.markerClusterGroup === 'function') {
     clusterGroup = L.markerClusterGroup({
@@ -188,41 +447,35 @@ export function renderHotspotLayer(map, events) {
     clusterGroup = L.layerGroup();
   }
 
-  // To prevent browser hang on huge numbers, cap point markers to 5,000 top events or viewport
-  const maxRenderPoints = 5000;
-  const renderList = events.length > maxRenderPoints ? events.slice(0, maxRenderPoints) : events;
+  const maxRender = 4000;
+  const list = events.length > maxRender ? events.slice(0, maxRender) : events;
 
-  for (const e of renderList) {
+  for (const e of list) {
     if (!e.lat || !e.lon) continue;
 
-    // Hotspot circle marker
     const marker = L.circleMarker([e.lat, e.lon], {
-      radius: e.highElevation500m ? 5 : 4,
+      radius: e.highElevation500m ? 4.5 : 3.5,
       fillColor: e.highElevation500m ? '#e11d48' : '#f59e0b',
       color: '#ffffff',
       weight: 1,
       opacity: 0.9,
-      fillOpacity: 0.8
+      fillOpacity: 0.85
     });
 
-    const popupHtml = `
-      <div style="font-family: var(--font-family); min-width: 220px; font-size: 0.8rem; line-height: 1.5;">
-        <div style="font-weight: 700; color: #991b1b; border-bottom: 1px solid #fee2e2; padding-bottom: 4px; margin-bottom: 6px;">
-          🔥 จุดความร้อนจากดาวเทียม
-        </div>
-        <div><strong>วันที่ตรวจพบ:</strong> ${escapeHtml(e.date)}</div>
-        <div><strong>จังหวัด:</strong> ${escapeHtml(e.province)}</div>
-        <div><strong>อำเภอ/ตำบล:</strong> ${escapeHtml(e.district)} / ${escapeHtml(e.tambon)}</div>
-        ${e.village ? `<div><strong>หมู่บ้าน:</strong> ${escapeHtml(e.village)}</div>` : ''}
-        <div><strong>ระดับความสูง:</strong> ${escapeHtml(e.elevationCategory)}</div>
-        <div><strong>การใช้ประโยชน์ที่ดิน:</strong> ${escapeHtml(e.landuse)}</div>
-        <div><strong>พื้นที่โครงการ:</strong> ${escapeHtml(e.projectCategory)}</div>
-        ${e.frp !== null ? `<div><strong>ค่า FRP:</strong> ${e.frp.toFixed(2)} MW</div>` : ''}
-        ${e.satellite ? `<div><strong>ดาวเทียม / ความเชื่อมั่น:</strong> ${escapeHtml(e.satellite)} (${escapeHtml(e.confidence)})</div>` : ''}
+    marker.bindPopup(`
+      <div style="font-family: var(--font-family); min-width: 200px; font-size: 0.8rem; line-height: 1.4;">
+        <strong style="color: #b91c1c;">รายการตรวจพบจุดความร้อนดาวเทียม</strong><br>
+        <span>วันที่: ${escapeHtml(e.date)}</span><br>
+        <span>จังหวัด: ${escapeHtml(e.province)}</span><br>
+        <span>อำเภอ/ตำบล: ${escapeHtml(e.district)} / ${escapeHtml(e.tambon)}</span><br>
+        <span>ระดับความสูง: ${escapeHtml(e.elevationCategory)}</span><br>
+        <span>การใช้ประโยชน์ที่ดิน: ${escapeHtml(e.landuse)}</span><br>
+        <span>พื้นที่โครงการ: ${escapeHtml(e.projectCategory)}</span><br>
+        ${e.frp ? `<span>FRP: ${e.frp.toFixed(2)} MW</span><br>` : ''}
+        <span>ดาวเทียม: ${escapeHtml(e.satellite)} (${escapeHtml(e.confidence)})</span>
       </div>
-    `;
+    `);
 
-    marker.bindPopup(popupHtml);
     clusterGroup.addLayer(marker);
   }
 
@@ -230,15 +483,10 @@ export function renderHotspotLayer(map, events) {
   return clusterGroup;
 }
 
-/**
- * Utility: Safe HTML escape to prevent XSS in tooltips and popups
- */
 function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
+  if (!str) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/>/g, '&gt;');
 }

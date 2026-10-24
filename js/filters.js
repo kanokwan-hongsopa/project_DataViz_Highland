@@ -1,63 +1,77 @@
 /**
- * filters.js — Global Hierarchical Filtering & Query Engine
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
+ * filters.js — Dataset-Aware Cascading Filters & Query Engine
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
 import { getDb } from './data-loader.js';
 
+export const STUDY_PROVINCES = [
+  'กาญจนบุรี', 'กำแพงเพชร', 'ตาก', 'น่าน', 'พิษณุโลก',
+  'เชียงราย', 'เชียงใหม่', 'เพชรบูรณ์', 'แม่ฮ่องสอน'
+];
+
 /**
- * Get distinct province list
+ * Get distinct study provinces list (strictly only the 9 study provinces)
  */
 export function getAvailableProvinces() {
   const db = getDb();
   if (db.config && db.config.provinces) {
     return [...db.config.provinces];
   }
-  const set = new Set(db.stations.map(s => s.province));
-  return Array.from(set).sort();
+  return [...STUDY_PROVINCES];
 }
 
 /**
- * Get distinct districts for the currently selected province (or all)
+ * Dataset-aware district retriever:
+ * In 'climate', 'overview', or 'correlation' context: only returns districts that contain actual HRDI weather stations.
+ * In 'hotspots' context: returns districts that contain actual hotspot detections.
+ * 
  * @param {string|null} province 
+ * @param {string} [context='overview'] 'overview' | 'climate' | 'rainfall' | 'hotspots' | 'correlation'
+ * @returns {string[]}
  */
-export function getAvailableDistricts(province = null) {
+export function getAvailableDistricts(province = null, context = 'overview') {
   const db = getDb();
   const set = new Set();
 
-  // From stations
-  for (const s of db.stations) {
-    if (!province || s.province === province) {
-      if (s.district) set.add(s.district);
+  if (context === 'hotspots') {
+    // In Hotspot Explorer, show districts with actual hotspot records
+    for (const h of db.hotspotDistrictMonth) {
+      if (!province || h.province === province) {
+        if (h.district && h.count > 0) set.add(h.district);
+      }
+    }
+  } else {
+    // In Climate, Overview, Rainfall, and Correlation, show only districts with real HRDI weather stations
+    for (const s of db.stations) {
+      if (!province || s.province === province) {
+        if (s.district) set.add(s.district);
+      }
     }
   }
 
-  // Also include districts from hotspot aggregates for full geographic coverage
-  for (const h of db.hotspotDistrictMonth) {
-    if (!province || h.province === province) {
-      if (h.district) set.add(h.district);
-    }
-  }
-
-  return Array.from(set).sort();
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'));
 }
 
 /**
- * Get distinct tambons for the selected province and district
+ * Dataset-aware subdistrict (tambon) retriever
  * @param {string|null} province 
  * @param {string|null} district 
+ * @param {string} [context='overview']
+ * @returns {string[]}
  */
-export function getAvailableTambons(province = null, district = null) {
+export function getAvailableTambons(province = null, district = null, context = 'overview') {
   const db = getDb();
   const set = new Set();
 
+  // Primary source: stations in matching area
   for (const s of db.stations) {
     if (province && s.province !== province) continue;
     if (district && s.district !== district) continue;
     if (s.tambon) set.add(s.tambon);
   }
 
-  return Array.from(set).sort();
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'));
 }
 
 /**
@@ -93,31 +107,18 @@ export function filterStationMonthRecords(records, state, targetYear = null) {
   const selectedMonths = new Set(state.selectedMonths);
 
   return records.filter(r => {
-    // Year filter
     if (!yearFilter.includes(r.year)) return false;
-
-    // Month filter
     if (!selectedMonths.has(r.month)) return false;
-
-    // Station filter (highest specificity)
     if (state.stationId && r.station_id !== state.stationId) return false;
-
-    // Province filter
     if (state.province && r.province !== state.province) return false;
-
-    // District filter
     if (state.district && r.district !== state.district) return false;
-
-    // Tambon filter
     if (state.tambon && r.tambon !== state.tambon) return false;
-
     return true;
   });
 }
 
 /**
  * Filter HII provincial rainfall records based on state
- * (Note: HII data is at province-month resolution; district/tambon filters do not apply directly)
  * @param {Array} hiiRecords 
  * @param {Object} state 
  * @param {number|null} [targetYear] 
@@ -219,8 +220,8 @@ export function getFilteredHotspotCount(state, targetYear = null) {
 }
 
 /**
- * Filter raw normalized hotspot event records (e.g. from partitions)
- * @param {Array} events Array of normalized hotspot event objects
+ * Filter raw normalized hotspot event records
+ * @param {Array} events 
  * @param {Object} state 
  * @returns {Array} Filtered hotspot events
  */
@@ -230,30 +231,20 @@ export function filterRawHotspotEvents(events, state) {
   const selectedMonths = new Set(state.selectedMonths);
 
   return events.filter(e => {
-    // Month filter
     if (!selectedMonths.has(e.month)) return false;
-
-    // Province filter
     if (state.province && e.province !== state.province) return false;
-
-    // District filter
     if (state.district && e.district !== state.district) return false;
-
-    // Tambon filter
     if (state.tambon && e.tambon !== state.tambon) return false;
 
-    // Elevation filter
     if (state.hotspotElevation === 'high' && !e.highElevation500m) return false;
     if (state.hotspotElevation === 'low' && e.highElevation500m) return false;
 
-    // Project filter
     if (state.hotspotProject === 'in_project' && !e.inHrdiProject) return false;
     if (state.hotspotProject === 'outside' && e.inHrdiProject) return false;
     if (state.hotspotProject !== 'all' && state.hotspotProject !== 'in_project' && state.hotspotProject !== 'outside') {
       if (e.projectCategory !== state.hotspotProject) return false;
     }
 
-    // Land use filter
     if (state.landuse && state.landuse !== 'all' && e.landuse !== state.landuse) {
       return false;
     }

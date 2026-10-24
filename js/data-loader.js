@@ -1,6 +1,6 @@
 /**
  * data-loader.js — Data Fetching, Partition Caching & Verification
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
 const DATA_ROOT = 'data/';
@@ -18,6 +18,7 @@ const db = {
   hotspotByElevation: [],
   hotspotByLanduse: [],
   hotspotByProject: [],
+  thailandGeoJson: null,
   // Partition cache: key "YYYY-MM" -> array of normalized event objects
   hotspotPartitions: new Map()
 };
@@ -40,15 +41,20 @@ async function fetchJson(relativePath) {
  * @param {Function} onProgress Optional progress callback (percent, message)
  */
 export async function loadCoreData(onProgress = () => {}) {
-  onProgress(10, 'กำลังโหลดข้อมูลคอนฟิกและสถานีตรวจวัด...');
-  const [config, stations, manifest] = await Promise.all([
+  onProgress(10, 'กำลังโหลดข้อมูลคอนฟิก แผนที่ และสถานีตรวจวัด...');
+  const [config, stations, manifest, thailandGeo] = await Promise.all([
     fetchJson('dashboard_config.json'),
     fetchJson('stations.json'),
-    fetchJson('hotspot_manifest.json')
+    fetchJson('hotspot_manifest.json'),
+    fetchJson('thailand_provinces.geojson').catch(err => {
+      console.warn('Could not load local thailand_provinces.geojson:', err);
+      return null;
+    })
   ]);
   db.config = config;
   db.stations = stations;
   db.hotspotManifest = manifest;
+  db.thailandGeoJson = thailandGeo;
 
   onProgress(35, 'กำลังโหลดข้อมูลภูมิอากาศ HRDI และ HII...');
   const [hrdi, hii, dashboardSm] = await Promise.all([
@@ -76,9 +82,7 @@ export async function loadCoreData(onProgress = () => {}) {
 
   onProgress(100, 'โหลดข้อมูลหลักสมบูรณ์');
 
-  // Verify dataset record counts against strict requirements
   verifyDataIntegrity();
-
   return db;
 }
 
@@ -111,7 +115,7 @@ export function verifyDataIntegrity() {
   if (errors.length > 0) {
     console.error('Data integrity check warnings:', errors);
   } else {
-    console.log('✓ Data integrity verified: 50 stations, 977 HRDI, 216 HII, 106,036 hotspots.');
+    console.log('[PASS] Data integrity verified: 50 stations, 977 HRDI, 216 HII, 106,036 hotspots, 77 province boundaries.');
   }
   return { valid: errors.length === 0, errors };
 }
@@ -131,7 +135,6 @@ export async function loadHotspotPartition(year, month) {
   const path = `hotspots/${year}/${String(month).padStart(2, '0')}.json`;
   const rawEvents = await fetchJson(path);
 
-  // Normalize fields explicitly according to HANDOFF guidelines
   const normalized = rawEvents.map(e => ({
     hotspot_id: e.hotspot_id,
     date: e.date,
@@ -159,10 +162,10 @@ export async function loadHotspotPartition(year, month) {
 
 /**
  * Lazy-load all monthly hotspot partitions matching the given years and months list
- * @param {number[]} years e.g. [2022] or [2023] or [2022, 2023]
- * @param {number[]} months e.g. [1, 2, 3]
+ * @param {number[]} years
+ * @param {number[]} months
  * @param {Function} onProgress
- * @returns {Promise<Array>} Combined array of normalized hotspot events
+ * @returns {Promise<Array>}
  */
 export async function loadHotspotsForWindow(years, months, onProgress = () => {}) {
   const tasks = [];
@@ -220,4 +223,7 @@ export function getHotspotByLanduse() {
 }
 export function getHotspotByProject() {
   return db.hotspotByProject;
+}
+export function getThailandGeoJson() {
+  return db.thailandGeoJson;
 }

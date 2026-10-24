@@ -1,26 +1,29 @@
 /**
  * state.js — Single Source of Truth for Global Dashboard State
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
 export const DEFAULT_MONTHS_COMPARE = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 export const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const initialState = {
-  activeTab: 'overview',      // 'overview' | 'climate' | 'rainfall' | 'hotspots' | 'correlation'
-  yearMode: 'compare',       // '2022' | '2023' | 'compare'
+  activeTab: 'overview',        // 'overview' | 'climate' | 'rainfall' | 'hotspots' | 'correlation'
+  yearMode: 'compare',         // '2022' | '2023' | 'compare'
   selectedMonths: [...DEFAULT_MONTHS_COMPARE], // Default Jan–Sep for fair HRDI comparison
-  province: null,             // Selected province or null (all 9 provinces)
-  district: null,             // Selected district or null
-  tambon: null,               // Selected subdistrict or null
-  stationId: null,            // Selected station ID or null
-  metric: 'temp',             // 'temp' | 'rainfall' | 'humidity' | 'wind_speed' | 'temp_min' | 'temp_max'
-  hotspotElevation: 'all',    // 'all' | 'high' (>500m) | 'low' (<=500m)
-  hotspotProject: 'all',      // 'all' | 'in_project' | 'outside' | specific project
-  landuse: 'all',             // 'all' | specific land use category
-  proximityMethod: '10km',    // '10km' | 'tambon' (for Page 5 Climate x Hotspot)
-  rainfallComparable: false,  // Strict config gate default false (Q4 quantitative diff safeguard)
-  searchQuery: ''             // Optional search query for stations/districts
+  province: null,               // Selected province or null (all 9 provinces)
+  district: null,               // Selected district or null
+  tambon: null,                 // Selected subdistrict or null
+  stationId: null,              // Selected station ID or null
+  metric: 'temp',               // 'temp' | 'rainfall' | 'humidity' | 'wind_speed' | 'temp_min' | 'temp_max'
+  overviewMetricTab: 'temp',    // 'temp' | 'humidity' | 'rainfall' | 'hotspots'
+  hotspotElevation: 'all',      // 'all' | 'high' (>500m) | 'low' (<=500m)
+  hotspotProject: 'all',        // 'all' | 'in_project' | 'outside' | specific project
+  landuse: 'all',               // 'all' | specific land use category
+  proximityMethod: '10km',      // Fixed strictly to 10 km radius around HRDI station
+  mapSwipePercent: 50,          // 0 to 100% split for before/after comparison
+  swipeMetric: 'temp',          // 'temp' | 'rainfall' | 'hotspots'
+  rainfallComparable: false,    // Strict config gate default false (Q4 safeguard)
+  searchQuery: ''               // Optional search query
 };
 
 let currentState = { ...initialState };
@@ -52,6 +55,9 @@ export function setState(updates) {
   const oldState = { ...currentState };
   const nextState = { ...currentState, ...updates };
 
+  // Enforce fixed 10 km proximity definition
+  nextState.proximityMethod = '10km';
+
   // Cascade resets when geographic boundary changes
   if (updates.province !== undefined && updates.province !== oldState.province) {
     nextState.district = null;
@@ -65,12 +71,10 @@ export function setState(updates) {
   // When switching year mode, adjust default months if appropriate
   if (updates.yearMode && updates.yearMode !== oldState.yearMode) {
     if (updates.yearMode === 'compare') {
-      // Return to fair Jan–Sep window unless user explicitly passed selectedMonths
       if (!updates.selectedMonths) {
         nextState.selectedMonths = [...DEFAULT_MONTHS_COMPARE];
       }
     } else if (!updates.selectedMonths && oldState.selectedMonths.length === DEFAULT_MONTHS_COMPARE.length) {
-      // In single year mode, default to all months if not specified
       nextState.selectedMonths = [...ALL_MONTHS];
     }
   }
@@ -90,7 +94,7 @@ export function setState(updates) {
 }
 
 /**
- * Reset all geographic, category, and temporal filters to defaults
+ * Reset all geographic, category, and temporal filters to defaults (9-province overview)
  */
 export function resetFilters() {
   setState({

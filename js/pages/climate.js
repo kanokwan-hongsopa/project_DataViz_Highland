@@ -1,10 +1,10 @@
 /**
- * climate.js — Page 2: Highland Climate (Q1, Q2)
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
+ * climate.js — Page 2: ภูมิอากาศพื้นที่สูง (Highland Climate - Q1, Q2)
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
 import { getState, setState } from '../state.js';
-import { getDb, getStations } from '../data-loader.js';
+import { getDb } from '../data-loader.js';
 import { filterStationMonthRecords } from '../filters.js';
 import {
   calculateMean,
@@ -19,12 +19,12 @@ import {
 } from '../charts.js';
 
 export const METRIC_CONFIG = {
-  temp: { label: 'อุณหภูมิเฉลี่ย', unit: '°C', decimals: 1, minColor: '#3b82f6', maxColor: '#ef4444' },
-  temp_min: { label: 'อุณหภูมิต่ำสุด', unit: '°C', decimals: 1, minColor: '#1d4ed8', maxColor: '#f97316' },
-  temp_max: { label: 'อุณหภูมิสูงสุด', unit: '°C', decimals: 1, minColor: '#60a5fa', maxColor: '#b91c1c' },
-  rainfall: { label: 'ปริมาณน้ำฝน', unit: 'มม.', decimals: 1, minColor: '#e0f2fe', maxColor: '#0284c7' },
-  humidity: { label: 'ความชื้นสัมพัทธ์', unit: '%', decimals: 1, minColor: '#fef3c7', maxColor: '#0d9488' },
-  wind_speed: { label: 'ความเร็วลม', unit: 'ม./วินาที', decimals: 2, minColor: '#f1f5f9', maxColor: '#64748b' }
+  temp: { label: 'อุณหภูมิเฉลี่ย', unit: '°C', decimals: 1 },
+  temp_min: { label: 'อุณหภูมิต่ำสุด', unit: '°C', decimals: 1 },
+  temp_max: { label: 'อุณหภูมิสูงสุด', unit: '°C', decimals: 1 },
+  rainfall: { label: 'ปริมาณน้ำฝน', unit: 'มม.', decimals: 1 },
+  humidity: { label: 'ความชื้นสัมพัทธ์', unit: '%', decimals: 1 },
+  wind_speed: { label: 'ความเร็วลม', unit: 'ม./วินาที', decimals: 2 }
 };
 
 /**
@@ -71,7 +71,7 @@ function renderClimateSummaryCards(state, hrdi2022, hrdi2023, hrdiAll, metric, m
   if (minMaxEl) {
     minMaxEl.textContent = stats.count > 0
       ? `ต่ำสุด ${formatNum(stats.min, metricCfg.decimals)} ${metricCfg.unit} / สูงสุด ${formatNum(stats.max, metricCfg.decimals)} ${metricCfg.unit}`
-      : 'ไม่มีข้อมูล';
+      : 'ไม่มีข้อมูลสังเกตจริง';
   }
 
   if (subEl) {
@@ -100,15 +100,8 @@ function renderClimateTimeSeries(state, hrdi2022, hrdi2023, metric, metricCfg) {
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const labels = months.map(m => THAI_MONTH_NAMES[m - 1]);
 
-  const vals2022 = months.map(m => {
-    const list = hrdi2022.filter(r => r.month === m);
-    return calculateMean(list, metric).mean;
-  });
-
-  const vals2023 = months.map(m => {
-    const list = hrdi2023.filter(r => r.month === m);
-    return calculateMean(list, metric).mean;
-  });
+  const vals2022 = months.map(m => calculateMean(hrdi2022.filter(r => r.month === m), metric).mean);
+  const vals2023 = months.map(m => calculateMean(hrdi2023.filter(r => r.month === m), metric).mean);
 
   const datasets = [];
 
@@ -116,8 +109,9 @@ function renderClimateTimeSeries(state, hrdi2022, hrdi2023, metric, metricCfg) {
     datasets.push({
       label: `ปี 2022 (${metricCfg.label})`,
       data: vals2022,
-      borderColor: '#2563eb',
-      backgroundColor: 'rgba(37, 99, 235, 0.1)',
+      borderColor: '#f59e0b',
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+      borderWidth: 2,
       tension: 0.3,
       spanGaps: false,
       pointRadius: 4
@@ -128,8 +122,9 @@ function renderClimateTimeSeries(state, hrdi2022, hrdi2023, metric, metricCfg) {
     datasets.push({
       label: `ปี 2023 (${metricCfg.label})`,
       data: vals2023,
-      borderColor: '#0d9488',
-      backgroundColor: 'rgba(13, 148, 136, 0.1)',
+      borderColor: '#06b6d4',
+      backgroundColor: 'rgba(6, 182, 212, 0.1)',
+      borderWidth: 2,
       tension: 0.3,
       spanGaps: false,
       pointRadius: 4
@@ -152,6 +147,7 @@ function renderClimateTimeSeries(state, hrdi2022, hrdi2023, metric, metricCfg) {
         title: {
           display: true,
           text: `${metricCfg.label} (${metricCfg.unit})`,
+          color: '#94a3b8',
           font: { size: 11 }
         }
       }
@@ -163,7 +159,6 @@ function renderClimateTimeSeries(state, hrdi2022, hrdi2023, metric, metricCfg) {
  * Render Station Ranking Bar Chart (Q2)
  */
 function renderClimateStationRanking(state, hrdiAll, metric, metricCfg) {
-  // Group records by station_id
   const stationMap = new Map();
   for (const r of hrdiAll) {
     if (!stationMap.has(r.station_id)) {
@@ -190,12 +185,9 @@ function renderClimateStationRanking(state, hrdiAll, metric, metricCfg) {
     }
   }
 
-  // Sort descending by mean
   stationStats.sort((a, b) => b.mean - a.mean);
-
-  // Take top 15 for readable bar chart or all if filtered
   const displayList = stationStats.slice(0, 15);
-  const labels = displayList.map(s => `${s.name} (${s.province})`);
+  const labels = displayList.map((s, idx) => `${idx + 1}. ${s.name} (${s.province})`);
   const data = displayList.map(s => s.mean);
 
   renderBarChart('climate-station-ranking-chart', {
@@ -226,7 +218,8 @@ function renderClimateStationRanking(state, hrdiAll, metric, metricCfg) {
       x: {
         title: {
           display: true,
-          text: `${metricCfg.label} (${metricCfg.unit}) — คลิกแท่งเพื่อเลือกสถานี`,
+          text: `${metricCfg.label} (${metricCfg.unit}) — คลิกเพื่อเลือกสถานี`,
+          color: '#94a3b8',
           font: { size: 11 }
         }
       }
@@ -244,7 +237,6 @@ function renderClimateHeatmap(state, metric, metricCfg) {
   const db = getDb();
   const targetYear = state.yearMode === 'compare' ? 2022 : Number(state.yearMode);
 
-  // Filter stations based on province/district selection
   const stations = db.stations.filter(s => {
     if (state.province && s.province !== state.province) return false;
     if (state.district && s.district !== state.district) return false;
@@ -252,8 +244,6 @@ function renderClimateHeatmap(state, metric, metricCfg) {
   });
 
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
-  // Map station-month records for fast lookup
   const recordMap = new Map();
   for (const r of db.hrdiStationMonth) {
     if (r.year === targetYear) {
@@ -261,7 +251,6 @@ function renderClimateHeatmap(state, metric, metricCfg) {
     }
   }
 
-  // Find overall min and max for heatmap color scaling
   let minVal = Infinity;
   let maxVal = -Infinity;
   for (const s of stations) {
@@ -275,10 +264,9 @@ function renderClimateHeatmap(state, metric, metricCfg) {
     }
   }
 
-  // Construct table HTML
   let tableHtml = `
-    <div style="margin-bottom: 0.5rem; font-size: 0.8rem; color: #64748b;">
-      แสดงข้อมูลปี <strong>${targetYear}</strong> (${stations.length} สถานี) | Missing แสดงผลด้วย "—" ไม่แทนค่าด้วยศูนย์
+    <div style="margin-bottom: 0.5rem; font-size: 0.78rem; color: #94a3b8;">
+      แสดงข้อมูลปี <strong>${targetYear}</strong> (${stations.length} สถานี) | ข้อมูลที่ไม่มีการตรวจวัดแสดงด้วย "—" (ไม่แทนค่าด้วย 0)
     </div>
     <table class="matrix-table">
       <thead>
@@ -294,29 +282,27 @@ function renderClimateHeatmap(state, metric, metricCfg) {
   for (const s of stations) {
     const isSelected = state.stationId === s.station_id;
     tableHtml += `
-      <tr style="${isSelected ? 'background: #f0fdfa; font-weight: 700;' : ''}">
+      <tr style="${isSelected ? 'background: rgba(6, 182, 212, 0.15); font-weight: 700;' : ''}">
         <td class="station-col" style="cursor: pointer;" onclick="window.selectStation('${s.station_id}', '${s.province}')">
-          📍 ${escapeHtml(s.station_name)}
+          ${escapeHtml(s.station_name)}
         </td>
-        <td style="color: #64748b; font-size: 0.75rem;">${escapeHtml(s.province)}</td>
+        <td style="color: #94a3b8; font-size: 0.75rem;">${escapeHtml(s.province)}</td>
     `;
 
     for (const m of months) {
       const val = recordMap.get(`${s.station_id}_${m}`);
       if (val !== undefined && val !== null && !Number.isNaN(Number(val))) {
         const num = Number(val);
-        // Normalized color interpolation (0 to 1)
         const ratio = maxVal > minVal ? (num - minVal) / (maxVal - minVal) : 0.5;
-        // Teal gradient: rgba(13, 148, 136, alpha)
-        const bgAlpha = 0.12 + ratio * 0.7;
-        const textColor = ratio > 0.65 ? '#ffffff' : '#0f172a';
+        const bgAlpha = 0.15 + ratio * 0.7;
+        const textColor = ratio > 0.6 ? '#ffffff' : '#e2e8f0';
         tableHtml += `
-          <td style="background-color: rgba(13, 148, 136, ${bgAlpha.toFixed(2)}); color: ${textColor};" title="${s.station_name} เดือน ${THAI_MONTH_NAMES[m - 1]}: ${num.toFixed(metricCfg.decimals)} ${metricCfg.unit}">
+          <td style="background-color: rgba(6, 182, 212, ${bgAlpha.toFixed(2)}); color: ${textColor};" title="${s.station_name} เดือน ${THAI_MONTH_NAMES[m - 1]}: ${num.toFixed(metricCfg.decimals)} ${metricCfg.unit}">
             ${num.toFixed(metricCfg.decimals)}
           </td>
         `;
       } else {
-        tableHtml += `<td style="color: #cbd5e1; background: #fafafa;" title="ไม่มีข้อมูลสังเกตจริง">—</td>`;
+        tableHtml += `<td style="color: #475569; background: rgba(255,255,255,0.02);" title="ไม่มีข้อมูลสังเกตจริง">—</td>`;
       }
     }
 

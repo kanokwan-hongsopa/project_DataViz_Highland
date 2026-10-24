@@ -1,12 +1,6 @@
 /**
- * hotspots.js — Page 4: Hotspot Explorer (Q5)
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
- * 
- * Strict contracts:
- * - Hotspot means satellite detection records, not confirmed wildfires
- * - Lazy-loads raw monthly partitions only when viewing point map
- * - Fast aggregate tables used for summary distributions
- * - Multi-dimensional filters: Province -> District -> Tambon, Elevation (>500m), Land Use, Project
+ * hotspots.js — Page 4: สำรวจจุดความร้อน (Hotspot Explorer - Q5)
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
 import { getState, setState } from '../state.js';
@@ -25,8 +19,8 @@ import {
 import {
   initLeafletMap,
   renderHotspotLayer,
-  DEFAULT_CENTER,
-  DEFAULT_ZOOM
+  HIGHLAND_CENTER,
+  HIGHLAND_ZOOM
 } from '../maps.js';
 import {
   renderLineChart,
@@ -43,9 +37,7 @@ let currentHotspotLayer = null;
  */
 export async function renderHotspotsPage() {
   const state = getState();
-  const db = getDb();
 
-  // 1. Calculate Summary Totals
   const count2022 = getFilteredHotspotCount(state, 2022);
   const count2023 = getFilteredHotspotCount(state, 2023);
   const totalCount = state.yearMode === '2022' ? count2022
@@ -54,19 +46,19 @@ export async function renderHotspotsPage() {
 
   renderHotspotKpis(state, count2022, count2023, totalCount);
 
-  // 2. Render Temporal Distribution (Monthly Trend Q5)
+  // 1. Render Monthly Temporal Distribution (Q5)
   renderHotspotTemporalChart(state);
 
-  // 3. Render Land Use Distribution
+  // 2. Render Land Use Distribution
   renderHotspotLanduseChart(state);
 
-  // 4. Render Elevation & Project Distribution
+  // 3. Render Elevation & Project Distribution
   renderHotspotElevationAndProjectCharts(state);
 
-  // 5. Render District Drilldown Ranking
+  // 4. Render District Drilldown Ranking
   renderHotspotDistrictRanking(state);
 
-  // 6. Render Hotspot Map with Lazy-loaded Partitions
+  // 5. Render Hotspot Map with Lazy-loaded Partitions
   await renderHotspotsPointMap(state);
 }
 
@@ -82,9 +74,9 @@ function renderHotspotKpis(state, count2022, count2023, totalCount) {
     if (state.yearMode === 'compare') {
       const yoy = calculateHotspotYoY(count2022, count2023);
       const sign = yoy.diff > 0 ? '+' : '';
-      const deltaClass = yoy.diff > 0 ? 'positive' : yoy.diff < 0 ? 'negative' : 'neutral';
+      const cls = yoy.diff > 0 ? 'positive' : yoy.diff < 0 ? 'negative' : 'neutral';
       totalSubEl.innerHTML = `
-        <span class="kpi-delta ${deltaClass}">YoY ${sign}${formatInt(yoy.diff)} (${yoy.pctChange ? (yoy.diff > 0 ? '+' : '') + yoy.pctChange.toFixed(1) + '%' : 'N/A'})</span>
+        <span class="kpi-delta ${cls}">YoY ${sign}${formatInt(yoy.diff)} (${yoy.pctChange ? (yoy.diff > 0 ? '+' : '') + yoy.pctChange.toFixed(1) + '%' : 'N/A'})</span>
         <span>(2022: ${formatInt(count2022)} | 2023: ${formatInt(count2023)})</span>
       `;
     } else {
@@ -101,27 +93,19 @@ function renderHotspotTemporalChart(state) {
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const labels = months.map(m => THAI_MONTH_NAMES[m - 1]);
 
-  const counts2022 = months.map(m => {
-    return db.hotspotProvinceMonth.reduce((sum, r) => {
-      if (r.year === 2022 && r.month === m) {
-        if (!state.province || r.province === state.province) {
-          return sum + (r.count || 0);
-        }
-      }
-      return sum;
-    }, 0);
-  });
+  const counts2022 = months.map(m => db.hotspotProvinceMonth.reduce((sum, r) => {
+    if (r.year === 2022 && r.month === m && (!state.province || r.province === state.province)) {
+      return sum + (r.count || 0);
+    }
+    return sum;
+  }, 0));
 
-  const counts2023 = months.map(m => {
-    return db.hotspotProvinceMonth.reduce((sum, r) => {
-      if (r.year === 2023 && r.month === m) {
-        if (!state.province || r.province === state.province) {
-          return sum + (r.count || 0);
-        }
-      }
-      return sum;
-    }, 0);
-  });
+  const counts2023 = months.map(m => db.hotspotProvinceMonth.reduce((sum, r) => {
+    if (r.year === 2023 && r.month === m && (!state.province || r.province === state.province)) {
+      return sum + (r.count || 0);
+    }
+    return sum;
+  }, 0));
 
   const datasets = [];
 
@@ -129,8 +113,8 @@ function renderHotspotTemporalChart(state) {
     datasets.push({
       label: 'ปี 2022 (รายการ)',
       data: counts2022,
-      borderColor: '#3b82f6',
-      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+      borderColor: '#f59e0b',
+      backgroundColor: 'rgba(245, 158, 11, 0.15)',
       tension: 0.3,
       fill: true,
       pointRadius: 4
@@ -141,8 +125,8 @@ function renderHotspotTemporalChart(state) {
     datasets.push({
       label: 'ปี 2023 (รายการ)',
       data: counts2023,
-      borderColor: '#e11d48',
-      backgroundColor: 'rgba(225, 29, 72, 0.15)',
+      borderColor: '#ef4444',
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
       tension: 0.3,
       fill: true,
       pointRadius: 4
@@ -162,7 +146,7 @@ function renderHotspotTemporalChart(state) {
     },
     scales: {
       y: {
-        title: { display: true, text: 'จำนวนรายการตรวจพบดาวเทียม', font: { size: 11 } }
+        title: { display: true, text: 'จำนวนรายการตรวจพบดาวเทียม', color: '#94a3b8', font: { size: 11 } }
       }
     }
   });
@@ -191,8 +175,8 @@ function renderHotspotLanduseChart(state) {
   const data = sortedList.map(item => item[1]);
 
   const palette = [
-    '#059669', '#0d9488', '#2563eb', '#f59e0b',
-    '#e11d48', '#8b5cf6', '#64748b', '#d97706'
+    '#059669', '#0d9488', '#0284c7', '#f59e0b',
+    '#ef4444', '#8b5cf6', '#64748b', '#d97706'
   ];
 
   renderDoughnutChart('hotspots-landuse-chart', {
@@ -220,7 +204,6 @@ function renderHotspotElevationAndProjectCharts(state) {
   const yearFilter = state.yearMode === 'compare' ? [2022, 2023] : [Number(state.yearMode)];
   const selectedMonths = new Set(state.selectedMonths);
 
-  // Elevation counts
   let highElevCount = 0;
   let lowElevCount = 0;
   for (const r of db.hotspotByElevation) {
@@ -239,7 +222,7 @@ function renderHotspotElevationAndProjectCharts(state) {
     labels: ['สูงกว่า 500 ม. (พื้นที่สูง)', 'ต่ำกว่า 500 ม.'],
     datasets: [{
       data: [highElevCount, lowElevCount],
-      backgroundColor: ['#0d9488', '#94a3b8']
+      backgroundColor: ['#0d9488', '#475569']
     }]
   }, {
     plugins: {
@@ -251,7 +234,6 @@ function renderHotspotElevationAndProjectCharts(state) {
     }
   });
 
-  // Project Area counts
   let inProjectCount = 0;
   let outsideProjectCount = 0;
   for (const r of db.hotspotByProject) {
@@ -270,7 +252,7 @@ function renderHotspotElevationAndProjectCharts(state) {
     labels: ['นอกพื้นที่โครงการ', 'ในพื้นที่โครงการ HRDI'],
     datasets: [{
       data: [outsideProjectCount, inProjectCount],
-      backgroundColor: ['#f59e0b', '#2563eb']
+      backgroundColor: ['#f59e0b', '#06b6d4']
     }]
   }, {
     plugins: {
@@ -303,7 +285,7 @@ function renderHotspotDistrictRanking(state) {
 
   const sorted = Array.from(districtMap.entries()).sort((a, b) => b[1] - a[1]);
   const topList = sorted.slice(0, 12);
-  const labels = topList.map(item => item[0]);
+  const labels = topList.map((item, i) => `${i + 1}. ${item[0]}`);
   const data = topList.map(item => item[1]);
 
   renderBarChart('hotspots-district-ranking-chart', {
@@ -311,7 +293,7 @@ function renderHotspotDistrictRanking(state) {
     datasets: [{
       label: 'จำนวนรายการตรวจพบจุดความร้อน',
       data,
-      backgroundColor: '#e11d48',
+      backgroundColor: '#ef4444',
       borderRadius: 4
     }]
   }, {
@@ -320,7 +302,7 @@ function renderHotspotDistrictRanking(state) {
       if (elements && elements.length > 0) {
         const idx = elements[0].index;
         const rawLabel = labels[idx];
-        const match = rawLabel.match(/^(.*)\s\((.*)\)$/);
+        const match = rawLabel.match(/^\d+\.\s*(.*)\s\((.*)\)$/);
         if (match) {
           const districtName = match[1];
           const provinceName = match[2];
@@ -339,7 +321,8 @@ function renderHotspotDistrictRanking(state) {
       x: {
         title: {
           display: true,
-          text: 'จำนวนรายการตรวจพบดาวเทียม (คลิกเพื่อกรองอำเภอ)',
+          text: 'จำนวนรายการตรวจพบดาวเทียม (คลิกเพื่อเลือกอำเภอ)',
+          color: '#94a3b8',
           font: { size: 11 }
         }
       }
@@ -360,14 +343,10 @@ async function renderHotspotsPointMap(state) {
   if (statusEl) statusEl.style.display = 'block';
 
   try {
-    // Determine which years and months to load
     const yearsToLoad = state.yearMode === 'compare' ? [2022, 2023] : [Number(state.yearMode)];
     const rawEvents = await loadHotspotsForWindow(yearsToLoad, state.selectedMonths);
-
-    // Filter events by active state
     const filteredEvents = filterRawHotspotEvents(rawEvents, state);
 
-    // Update map layer
     if (currentHotspotLayer) {
       hotspotMap.removeLayer(currentHotspotLayer);
     }

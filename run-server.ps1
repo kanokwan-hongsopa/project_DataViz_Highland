@@ -60,10 +60,11 @@ try {
                 ".css"  { "text/css; charset=utf-8" }
                 ".js"   { "application/javascript; charset=utf-8" }
                 ".json" { "application/json; charset=utf-8" }
-                ".png"  { "image/png" }
-                ".jpg"  { "image/jpeg" }
-                ".svg"  { "image/svg+xml" }
-                Default { "application/octet-stream" }
+                ".png"     { "image/png" }
+                ".jpg"     { "image/jpeg" }
+                ".svg"     { "image/svg+xml" }
+                ".geojson" { "application/geo+json; charset=utf-8" }
+                Default    { "application/octet-stream" }
             }
             $response.ContentType = $contentType
             $bytes = [System.IO.File]::ReadAllBytes($filePath)

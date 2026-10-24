@@ -1,10 +1,11 @@
 /**
  * charts.js — Chart.js Wrapper, Lifecycle Management & Styling
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  * 
- * Strict rule:
- * - NO forecasting lines, no future dashed extrapolation
- * - Tooltips show Thai units and record counts
+ * Strict rules:
+ * - NO emojis anywhere
+ * - Historical statistical trendlines allowed; NO future forecasting
+ * - Modern dark glass theme colors (Teal, Cyan, Ice Blue, Emerald, Amber, Rose)
  * - Clean destruction of instances on updates
  */
 
@@ -22,7 +23,6 @@ export const FULL_THAI_MONTH_NAMES = [
 
 /**
  * Destroy a chart instance if registered
- * @param {string} canvasId 
  */
 export function destroyChart(canvasId) {
   if (chartRegistry.has(canvasId)) {
@@ -37,14 +37,14 @@ export function destroyChart(canvasId) {
 }
 
 /**
- * Common default options for Chart.js
+ * Common default options for Chart.js in Dark Glass Theme
  */
 function getDefaultOptions(customOptions = {}) {
   return {
     responsive: true,
     maintainAspectRatio: false,
     animation: {
-      duration: 350
+      duration: 300
     },
     interaction: {
       mode: 'index',
@@ -55,51 +55,56 @@ function getDefaultOptions(customOptions = {}) {
         position: 'top',
         labels: {
           font: {
-            family: '-apple-system, BlinkMacSystemFont, "Sarabun", sans-serif',
+            family: '"Sarabun", -apple-system, sans-serif',
             size: 12
           },
+          color: '#cbd5e1',
           usePointStyle: true,
           boxWidth: 8
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        borderColor: 'rgba(255, 255, 255, 0.15)',
+        borderWidth: 1,
         titleFont: {
-          family: '-apple-system, BlinkMacSystemFont, "Sarabun", sans-serif',
+          family: '"Sarabun", -apple-system, sans-serif',
           size: 13,
           weight: 'bold'
         },
         bodyFont: {
-          family: '-apple-system, BlinkMacSystemFont, "Sarabun", sans-serif',
+          family: '"Sarabun", -apple-system, sans-serif',
           size: 12
         },
         padding: 10,
-        cornerRadius: 6
+        cornerRadius: 8
       }
     },
     scales: {
       x: {
         grid: {
-          color: '#f1f5f9'
+          color: 'rgba(255, 255, 255, 0.06)'
         },
         ticks: {
           font: {
-            family: '-apple-system, BlinkMacSystemFont, "Sarabun", sans-serif',
+            family: '"Sarabun", -apple-system, sans-serif',
             size: 11
           },
-          color: '#64748b'
+          color: '#94a3b8'
         }
       },
       y: {
         grid: {
-          color: '#f1f5f9'
+          color: 'rgba(255, 255, 255, 0.06)'
         },
         ticks: {
           font: {
-            family: '-apple-system, BlinkMacSystemFont, "Sarabun", sans-serif',
+            family: '"Sarabun", -apple-system, sans-serif',
             size: 11
           },
-          color: '#64748b'
+          color: '#94a3b8'
         }
       }
     },
@@ -109,9 +114,6 @@ function getDefaultOptions(customOptions = {}) {
 
 /**
  * Render a Line Chart
- * @param {string} canvasId 
- * @param {Object} data Chart.js data object
- * @param {Object} customOptions 
  */
 export function renderLineChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
@@ -133,9 +135,6 @@ export function renderLineChart(canvasId, data, customOptions = {}) {
 
 /**
  * Render a Bar Chart
- * @param {string} canvasId 
- * @param {Object} data 
- * @param {Object} customOptions 
  */
 export function renderBarChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
@@ -149,7 +148,7 @@ export function renderBarChart(canvasId, data, customOptions = {}) {
     type: 'bar',
     data,
     options: getDefaultOptions({
-      borderRadius: 4,
+      borderRadius: 6,
       ...customOptions
     })
   });
@@ -159,10 +158,7 @@ export function renderBarChart(canvasId, data, customOptions = {}) {
 }
 
 /**
- * Render a Scatter Chart
- * @param {string} canvasId 
- * @param {Object} data 
- * @param {Object} customOptions 
+ * Render a Scatter Chart with optional Linear Regression Statistical Trendline
  */
 export function renderScatterChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
@@ -171,10 +167,53 @@ export function renderScatterChart(canvasId, data, customOptions = {}) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return null;
 
+  // Calculate linear regression line for historical points (y = mx + b)
+  const points = data.datasets[0]?.data || [];
+  let trendDataset = null;
+
+  if (points.length >= 3 && customOptions.showTrendline !== false) {
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    const n = points.length;
+
+    for (const p of points) {
+      sumX += p.x;
+      sumY += p.y;
+      sumXY += p.x * p.y;
+      sumX2 += p.x * p.x;
+    }
+
+    const denom = (n * sumX2 - sumX * sumX);
+    if (denom !== 0) {
+      const slope = (n * sumXY - sumX * sumY) / denom;
+      const intercept = (sumY - slope * sumX) / n;
+
+      const minX = Math.min(...points.map(p => p.x));
+      const maxX = Math.max(...points.map(p => p.x));
+
+      trendDataset = {
+        type: 'line',
+        label: 'แนวโน้มเชิงสถิติ (Linear Regression)',
+        data: [
+          { x: minX, y: slope * minX + intercept },
+          { x: maxX, y: slope * maxX + intercept }
+        ],
+        borderColor: 'rgba(255, 255, 255, 0.45)',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        fill: false
+      };
+    }
+  }
+
+  const chartData = {
+    datasets: trendDataset ? [...data.datasets, trendDataset] : data.datasets
+  };
+
   const ctx = canvas.getContext('2d');
   const chart = new Chart(ctx, {
     type: 'scatter',
-    data,
+    data: chartData,
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -184,24 +223,33 @@ export function renderScatterChart(canvasId, data, customOptions = {}) {
       },
       plugins: {
         legend: {
-          display: false
+          display: true,
+          labels: {
+            font: { family: '"Sarabun", -apple-system, sans-serif', size: 11 },
+            color: '#94a3b8',
+            boxWidth: 8
+          }
         },
         tooltip: {
-          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#e2e8f0',
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderWidth: 1,
           padding: 10,
-          cornerRadius: 6,
+          cornerRadius: 8,
           ...customOptions.plugins?.tooltip
         }
       },
       scales: {
         x: {
-          grid: { color: '#f1f5f9' },
-          ticks: { color: '#64748b' },
+          grid: { color: 'rgba(255, 255, 255, 0.06)' },
+          ticks: { color: '#94a3b8' },
           title: customOptions.scales?.x?.title || {}
         },
         y: {
-          grid: { color: '#f1f5f9' },
-          ticks: { color: '#64748b' },
+          grid: { color: 'rgba(255, 255, 255, 0.06)' },
+          ticks: { color: '#94a3b8' },
           title: customOptions.scales?.y?.title || {}
         }
       },
@@ -214,10 +262,7 @@ export function renderScatterChart(canvasId, data, customOptions = {}) {
 }
 
 /**
- * Render a Doughnut / Pie Chart
- * @param {string} canvasId 
- * @param {Object} data 
- * @param {Object} customOptions 
+ * Render a Doughnut Chart
  */
 export function renderDoughnutChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
@@ -238,14 +283,24 @@ export function renderDoughnutChart(canvasId, data, customOptions = {}) {
           position: 'right',
           labels: {
             font: {
-              family: '-apple-system, BlinkMacSystemFont, "Sarabun", sans-serif',
+              family: '"Sarabun", -apple-system, sans-serif',
               size: 11
             },
+            color: '#cbd5e1',
             boxWidth: 10
           }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#e2e8f0',
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderWidth: 1,
+          padding: 10,
+          cornerRadius: 8
         }
       },
-      cutout: '65%',
+      cutout: '68%',
       ...customOptions
     }
   });

@@ -1,6 +1,6 @@
 /**
  * main.js — Application Entry Point, Navigation & Event Orchestration
- * Highland Climate & Hotspot Interactive Dashboard (2022–2023)
+ * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
 import {
@@ -35,12 +35,12 @@ async function initApp() {
   const loadingText = document.getElementById('app-loading-text');
 
   try {
-    // 1. Load core JSON datasets
+    // 1. Load core datasets & Thailand 77 provinces GeoJSON
     await loadCoreData((percent, message) => {
       if (loadingText) loadingText.textContent = `${message} (${percent}%)`;
     });
 
-    // 2. Setup global UI elements & filter dropdowns
+    // 2. Setup global UI elements & filter controls
     setupNavigationTabs();
     setupYearFilter();
     setupMonthPicker();
@@ -48,6 +48,7 @@ async function initApp() {
     setupMetricFilter();
     setupHotspotFilters();
     setupResetButton();
+    setupOverviewControls();
     setupGlobalWindowHelpers();
 
     // 3. Subscribe renderers to state changes
@@ -88,14 +89,12 @@ async function initApp() {
 function renderCurrentPage(state) {
   const activeTab = state.activeTab;
 
-  // Toggle page visibility
   const pages = document.querySelectorAll('.page-view');
   pages.forEach(p => p.classList.remove('active'));
 
   const activePageEl = document.getElementById(`page-${activeTab}`);
   if (activePageEl) activePageEl.classList.add('active');
 
-  // Trigger page-specific renderer
   switch (activeTab) {
     case 'overview':
       renderOverviewPage();
@@ -159,7 +158,6 @@ function setupMonthPicker() {
 
   if (!btnToggle || !modal) return;
 
-  // Toggle dropdown
   btnToggle.addEventListener('click', (e) => {
     e.stopPropagation();
     modal.classList.toggle('open');
@@ -171,7 +169,6 @@ function setupMonthPicker() {
     }
   });
 
-  // Render 12 month buttons
   if (monthGrid) {
     monthGrid.innerHTML = '';
     for (let m = 1; m <= 12; m++) {
@@ -183,7 +180,6 @@ function setupMonthPicker() {
         const state = getState();
         const currentMonths = new Set(state.selectedMonths);
         if (currentMonths.has(m)) {
-          // Prevent deselecting all months
           if (currentMonths.size > 1) {
             currentMonths.delete(m);
           }
@@ -196,14 +192,12 @@ function setupMonthPicker() {
     }
   }
 
-  // Quick action: Select All Months
   if (btnSelectAll) {
     btnSelectAll.addEventListener('click', () => {
       setState({ selectedMonths: [...ALL_MONTHS] });
     });
   }
 
-  // Quick action: Select Fair Comparison (Jan–Sep)
   if (btnSelectFair) {
     btnSelectFair.addEventListener('click', () => {
       setState({ selectedMonths: [...DEFAULT_MONTHS_COMPARE] });
@@ -212,7 +206,7 @@ function setupMonthPicker() {
 }
 
 /**
- * Setup Geographic Dropdowns (Province, District, Tambon, Station)
+ * Setup Geographic Dropdowns (Dataset-Aware)
  */
 function setupGeographicFilters() {
   const provSelect = document.getElementById('filter-province');
@@ -220,12 +214,12 @@ function setupGeographicFilters() {
   const tambonSelect = document.getElementById('filter-tambon');
   const stationSelect = document.getElementById('filter-station');
 
-  // Province dropdown
+  // Province dropdown (strictly 9 study provinces)
   if (provSelect) {
     const provinces = getAvailableProvinces();
-    provSelect.innerHTML = '<option value="">ทุกจังหวัด (9 จังหวัด)</option>';
+    provSelect.innerHTML = '<option value="">ทุกจังหวัด (9 จังหวัดศึกษา)</option>';
     for (const p of provinces) {
-      provSelect.innerHTML += `<option value="${p}">${p}</option>`;
+      provSelect.innerHTML += `<option value="${p}">จังหวัด${p}</option>`;
     }
     provSelect.addEventListener('change', (e) => {
       const val = e.target.value || null;
@@ -233,7 +227,6 @@ function setupGeographicFilters() {
     });
   }
 
-  // District dropdown
   if (distSelect) {
     distSelect.addEventListener('change', (e) => {
       const val = e.target.value || null;
@@ -241,7 +234,6 @@ function setupGeographicFilters() {
     });
   }
 
-  // Tambon dropdown
   if (tambonSelect) {
     tambonSelect.addEventListener('change', (e) => {
       const val = e.target.value || null;
@@ -249,7 +241,6 @@ function setupGeographicFilters() {
     });
   }
 
-  // Station dropdown
   if (stationSelect) {
     stationSelect.addEventListener('change', (e) => {
       const val = e.target.value || null;
@@ -271,7 +262,7 @@ function setupMetricFilter() {
 }
 
 /**
- * Setup Hotspot Category Filters (Elevation, Project, Land Use)
+ * Setup Hotspot Category Filters
  */
 function setupHotspotFilters() {
   const elevSelect = document.getElementById('filter-hotspot-elevation');
@@ -307,6 +298,37 @@ function setupHotspotFilters() {
 }
 
 /**
+ * Setup Overview Map Controls & Metric Tabs
+ */
+function setupOverviewControls() {
+  // Swipe metric buttons
+  const swipeBtns = document.querySelectorAll('.btn-swipe-metric');
+  swipeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const metric = btn.getAttribute('data-metric');
+      if (metric) {
+        swipeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setState({ swipeMetric: metric });
+      }
+    });
+  });
+
+  // Overview trend metric tab buttons
+  const trendBtns = document.querySelectorAll('.trend-metric-tab-btn');
+  trendBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const metric = btn.getAttribute('data-metric');
+      if (metric) {
+        trendBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setState({ overviewMetricTab: metric });
+      }
+    });
+  });
+}
+
+/**
  * Setup Reset All Filters Button
  */
 function setupResetButton() {
@@ -316,13 +338,20 @@ function setupResetButton() {
       resetFilters();
     });
   }
+
+  const btnStudyOverview = document.getElementById('btn-quick-study-overview');
+  if (btnStudyOverview) {
+    btnStudyOverview.addEventListener('click', () => {
+      setState({ province: null, district: null, tambon: null, stationId: null });
+    });
+  }
 }
 
 /**
- * Update dropdown options dynamically based on active state (hierarchical cascade)
+ * Update dropdown options dynamically based on active state (dataset-aware cascade)
  */
 function updateFilterControls(state) {
-  // Year segmented buttons
+  // Year segmented control buttons
   const segmentBtns = document.querySelectorAll('.segment-btn');
   segmentBtns.forEach(btn => {
     if (btn.getAttribute('data-year') === state.yearMode) {
@@ -332,15 +361,15 @@ function updateFilterControls(state) {
     }
   });
 
-  // Month summary button label
+  // Month summary button label (no emojis)
   const btnMonthToggle = document.getElementById('btn-month-picker-toggle');
   if (btnMonthToggle) {
     if (state.selectedMonths.length === 12) {
-      btnMonthToggle.innerHTML = '🗓️ ทุกเดือน (ม.ค. - ธ.ค.)';
+      btnMonthToggle.textContent = 'ทุกเดือน (ม.ค. - ธ.ค.)';
     } else if (state.selectedMonths.length === DEFAULT_MONTHS_COMPARE.length && state.selectedMonths.every((m, i) => m === i + 1)) {
-      btnMonthToggle.innerHTML = '🗓️ ม.ค. - ก.ย. (เปรียบเทียบยุติธรรม)';
+      btnMonthToggle.textContent = 'ม.ค. - ก.ย. (เปรียบเทียบยุติธรรม)';
     } else {
-      btnMonthToggle.innerHTML = `🗓️ เลือก ${state.selectedMonths.length} เดือน (${state.selectedMonths.map(m => THAI_MONTH_NAMES[m - 1]).join(', ')})`;
+      btnMonthToggle.textContent = `เลือก ${state.selectedMonths.length} เดือน (${state.selectedMonths.map(m => THAI_MONTH_NAMES[m - 1]).join(', ')})`;
     }
   }
 
@@ -361,10 +390,10 @@ function updateFilterControls(state) {
     provSelect.value = state.province || '';
   }
 
-  // Update District dropdown options
+  // Dataset-aware District dropdown
   const distSelect = document.getElementById('filter-district');
   if (distSelect) {
-    const districts = getAvailableDistricts(state.province);
+    const districts = getAvailableDistricts(state.province, state.activeTab);
     const currentVal = state.district;
     distSelect.innerHTML = '<option value="">ทุกอำเภอ</option>';
     for (const d of districts) {
@@ -372,10 +401,10 @@ function updateFilterControls(state) {
     }
   }
 
-  // Update Tambon dropdown options
+  // Dataset-aware Tambon dropdown
   const tambonSelect = document.getElementById('filter-tambon');
   if (tambonSelect) {
-    const tambons = getAvailableTambons(state.province, state.district);
+    const tambons = getAvailableTambons(state.province, state.district, state.activeTab);
     const currentVal = state.tambon;
     tambonSelect.innerHTML = '<option value="">ทุกตำบล</option>';
     for (const t of tambons) {
@@ -383,7 +412,7 @@ function updateFilterControls(state) {
     }
   }
 
-  // Update Station dropdown options
+  // Station dropdown
   const stationSelect = document.getElementById('filter-station');
   if (stationSelect) {
     const stations = getAvailableStations(state.province, state.district);
@@ -402,7 +431,7 @@ function updateFilterControls(state) {
 }
 
 /**
- * Render Breadcrumb Chips for active filters
+ * Render Breadcrumb Chips for active filters (No emojis)
  */
 function renderActiveChips(state) {
   const container = document.getElementById('active-filter-chips');
@@ -410,11 +439,9 @@ function renderActiveChips(state) {
 
   const chips = [];
 
-  // Year chip
   const yearText = state.yearMode === 'compare' ? 'เปรียบเทียบ 2022–2023' : `ปี ${state.yearMode}`;
   chips.push({ label: yearText, removable: false });
 
-  // Month chip
   if (state.selectedMonths.length < 12) {
     const monthText = state.selectedMonths.map(m => THAI_MONTH_NAMES[m - 1]).join(', ');
     chips.push({
@@ -424,7 +451,6 @@ function renderActiveChips(state) {
     });
   }
 
-  // Geographic chips
   if (state.province) {
     chips.push({
       label: `จังหวัด: ${state.province}`,
@@ -456,7 +482,6 @@ function renderActiveChips(state) {
     });
   }
 
-  // Hotspot category chips
   if (state.hotspotElevation !== 'all') {
     chips.push({
       label: `ความสูง: ${state.hotspotElevation === 'high' ? '>500 ม.' : '<=500 ม.'}`,
@@ -482,24 +507,23 @@ function renderActiveChips(state) {
   container.innerHTML = chips.map((c, i) => `
     <span class="filter-chip">
       ${c.label}
-      ${c.removable ? `<span class="chip-remove" onclick="window.removeFilterChip(${i})">✕</span>` : ''}
+      ${c.removable ? `<span class="chip-remove" onclick="window.removeFilterChip(${i})" title="ลบตัวกรอง"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span>` : ''}
     </span>
   `).join('');
 
-  // Register chip remove callbacks
   window._activeChipCallbacks = chips.map(c => c.onRemove);
 }
 
 /**
- * Register Global Window Helpers for inline HTML event handlers
+ * Register Global Window Helpers
  */
 function setupGlobalWindowHelpers() {
   window.selectStation = (stationId, province) => {
     setState({ stationId, province });
   };
 
-  window.selectProximityMethod = (method) => {
-    setState({ proximityMethod: method });
+  window.clearProvinceSelection = () => {
+    setState({ province: null, district: null, tambon: null, stationId: null });
   };
 
   window.toggleRainfallComparable = (checked) => {
@@ -513,7 +537,7 @@ function setupGlobalWindowHelpers() {
   };
 }
 
-// Start application when DOM is ready
+// Start application
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {
