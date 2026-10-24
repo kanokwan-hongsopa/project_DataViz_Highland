@@ -18,6 +18,7 @@ const db = {
   hotspotByElevation: [],
   hotspotByLanduse: [],
   hotspotByProject: [],
+  hotspotMultidimIndex: null,
   thailandGeoJson: null,
   // Partition cache: key "YYYY-MM" -> array of normalized event objects
   hotspotPartitions: new Map()
@@ -66,19 +67,24 @@ export async function loadCoreData(onProgress = () => {}) {
   db.hiiProvinceMonth = hii;
   db.stationMonthDashboard = dashboardSm;
 
-  onProgress(70, 'กำลังโหลดข้อมูลสรุปมิติจุดความร้อน...');
-  const [provHotspots, distHotspots, elevHotspots, luHotspots, projHotspots] = await Promise.all([
+  onProgress(70, 'กำลังโหลดข้อมูลสรุปมิติจุดความร้อนและดัชนีหลายมิติ...');
+  const [provHotspots, distHotspots, elevHotspots, luHotspots, projHotspots, multidimIdx] = await Promise.all([
     fetchJson('hotspot_province_month.json'),
     fetchJson('hotspot_district_month.json'),
     fetchJson('hotspot_by_elevation.json'),
     fetchJson('hotspot_by_landuse.json'),
-    fetchJson('hotspot_by_project.json')
+    fetchJson('hotspot_by_project.json'),
+    fetchJson('hotspot_multidim_index.json').catch(err => {
+      console.warn('Could not load hotspot_multidim_index.json:', err);
+      return null;
+    })
   ]);
   db.hotspotProvinceMonth = provHotspots;
   db.hotspotDistrictMonth = distHotspots;
   db.hotspotByElevation = elevHotspots;
   db.hotspotByLanduse = luHotspots;
   db.hotspotByProject = projHotspots;
+  db.hotspotMultidimIndex = multidimIdx;
 
   onProgress(100, 'โหลดข้อมูลหลักสมบูรณ์');
 
@@ -112,6 +118,10 @@ export function verifyDataIntegrity() {
     errors.push(`hotspot_province_month sum mismatch: expected 106,036, got ${provSum}`);
   }
 
+  if (db.hotspotMultidimIndex && db.hotspotMultidimIndex.total_events !== 106036) {
+    errors.push(`hotspot_multidim_index sum mismatch: expected 106,036, got ${db.hotspotMultidimIndex.total_events}`);
+  }
+
   if (errors.length > 0) {
     console.error('Data integrity check warnings:', errors);
   } else {
@@ -138,8 +148,8 @@ export async function loadHotspotPartition(year, month) {
   const normalized = rawEvents.map(e => ({
     hotspot_id: e.hotspot_id,
     date: e.date,
-    year: e.year,
-    month: e.month,
+    year: Number(e.year),
+    month: Number(e.month),
     province: e.province,
     district: e.district,
     tambon: e.tambon,
@@ -174,6 +184,8 @@ export async function loadHotspotsForWindow(years, months, onProgress = () => {}
       tasks.push({ year: y, month: m });
     }
   }
+
+  if (tasks.length === 0) return [];
 
   let completed = 0;
   const results = await Promise.all(
@@ -223,6 +235,9 @@ export function getHotspotByLanduse() {
 }
 export function getHotspotByProject() {
   return db.hotspotByProject;
+}
+export function getHotspotMultidimIndex() {
+  return db.hotspotMultidimIndex;
 }
 export function getThailandGeoJson() {
   return db.thailandGeoJson;

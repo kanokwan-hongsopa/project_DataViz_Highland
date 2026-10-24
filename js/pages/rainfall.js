@@ -1,5 +1,5 @@
 /**
- * rainfall.js — Page 3: เปรียบเทียบฝน HRDI และ HII (Rainfall Comparison - Q3, Q4)
+ * rainfall.js — Page 5 (Q5): คุณภาพข้อมูล ความครบถ้วน วิธีวัด ข้อจำกัด และแหล่งอ้างอิง
  * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  */
 
@@ -8,22 +8,18 @@ import { getDb } from '../data-loader.js';
 import {
   filterStationMonthRecords,
   filterHiiRecords,
+  getFilteredHotspotCount,
+  getAvailableStations,
   STUDY_PROVINCES
 } from '../filters.js';
+import { formatInt } from '../calculations.js';
 import {
-  calculateMean,
-  calculateFairHrdiYoY,
-  calculateFairHiiYoY,
-  formatNum
-} from '../calculations.js';
-import {
-  renderLineChart,
   renderBarChart,
-  THAI_MONTH_NAMES
+  YEAR_COLORS
 } from '../charts.js';
 
 /**
- * Initialize or update Page 3: Rainfall Comparison
+ * Render Tab Q5: Data Quality, Completeness, Methodology & Provenance
  */
 export function renderRainfallPage() {
   const state = getState();
@@ -32,256 +28,230 @@ export function renderRainfallPage() {
   const hrdi2022 = filterStationMonthRecords(db.hrdiStationMonth, state, 2022);
   const hrdi2023 = filterStationMonthRecords(db.hrdiStationMonth, state, 2023);
   const hrdiAll = filterStationMonthRecords(db.hrdiStationMonth, state);
-
-  const hii2022 = filterHiiRecords(db.hiiProvinceMonth, state, 2022);
-  const hii2023 = filterHiiRecords(db.hiiProvinceMonth, state, 2023);
   const hiiAll = filterHiiRecords(db.hiiProvinceMonth, state);
+  const hotspotTotal = getFilteredHotspotCount(state);
 
-  // 1. Render Summary Comparison Cards
-  renderRainfallSummaryCards(state, hrdiAll, hiiAll, hrdi2022, hrdi2023, hii2022, hii2023);
+  // 1. Update Summary Completeness KPIs
+  renderQualitySummaryCards(state, hrdi2022, hrdi2023, hrdiAll, hiiAll, hotspotTotal);
 
-  // 2. Render Comparability Gate Notice
-  renderComparabilityNotice(state);
+  // 2. Render Province Record Completeness Bar Chart (2022 vs 2023)
+  renderCompletenessByProvinceChart(state);
 
-  // 3. Render Dual-Series Monthly Line Chart (Q3)
-  renderDualRainfallTimeSeries(state, hrdi2022, hrdi2023, hii2022, hii2023);
+  // 3. Render Weather Source Distribution Chart (OpenWeatherMap vs HRDI Weather Station)
+  renderWeatherSourceDistributionChart(state);
 
-  // 4. Render Provincial Comparison Chart (Q4)
-  renderProvincialRainfallComparison(state);
-}
+  // 4. Render Interactive Station Metadata & Completeness Audit Table
+  renderStationCompletenessTable(state);
 
-/**
- * Render Summary Comparison Cards
- */
-function renderRainfallSummaryCards(state, hrdiAll, hiiAll, hrdi2022, hrdi2023, hii2022, hii2023) {
-  const hrdiStats = calculateMean(hrdiAll, 'rainfall');
-  const hiiStats = calculateMean(hiiAll, 'hii_avg_rain');
-
-  const hrdiValEl = document.getElementById('rainfall-hrdi-val');
-  const hrdiSubEl = document.getElementById('rainfall-hrdi-sub');
-  if (hrdiValEl) hrdiValEl.textContent = formatNum(hrdiStats.mean, 1);
-  if (hrdiSubEl) {
-    if (state.yearMode === 'compare') {
-      const hrdiYoY = calculateFairHrdiYoY(hrdi2022, hrdi2023, 'rainfall');
-      const sign = hrdiYoY.diff > 0 ? '+' : '';
-      hrdiSubEl.textContent = hrdiYoY.nPairs > 0
-        ? `YoY: ${sign}${formatNum(hrdiYoY.diff, 1)} มม. (N = ${hrdiYoY.nPairs} คู่สถานี)`
-        : hrdiYoY.note;
-    } else {
-      hrdiSubEl.textContent = `เฉลี่ยจาก ${hrdiStats.count} ค่าตรวจวัดรายสถานี`;
-    }
-  }
-
-  const hiiValEl = document.getElementById('rainfall-hii-val');
-  const hiiSubEl = document.getElementById('rainfall-hii-sub');
-  if (hiiValEl) hiiValEl.textContent = formatNum(hiiStats.mean, 1);
-  if (hiiSubEl) {
-    if (state.yearMode === 'compare') {
-      const hiiYoY = calculateFairHiiYoY(hii2022, hii2023);
-      const sign = hiiYoY.diff > 0 ? '+' : '';
-      hiiSubEl.textContent = hiiYoY.nPairs > 0
-        ? `YoY: ${sign}${formatNum(hiiYoY.diff, 1)} มม. (${hiiYoY.nPairs} คู่จังหวัด-เดือน)`
-        : 'ไม่มีข้อมูลเปรียบเทียบ';
-    } else {
-      hiiSubEl.textContent = `เฉลี่ยระดับจังหวัด (${hiiStats.count} รายการ HII)`;
-    }
+  // 5. Render Dynamic Key Insights (Q5)
+  const insightEl = document.getElementById('insight-q5');
+  if (insightEl) {
+    const matchedStations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
+    const owmCount = matchedStations.filter(s => s.source_type === 'OpenWeatherMap').length;
+    const hrdiSensorCount = matchedStations.filter(s => s.source_type === 'HRDI Weather Station').length;
+    insightEl.textContent = `ขอบเขตที่เลือกมีสถานีตรวจวัด ${matchedStations.length} แห่ง (OpenWeatherMap ${owmCount} แห่ง และสถานีภาคสนาม HRDI ${hrdiSensorCount} แห่ง) รวมข้อมูลภูมิอากาศจริง ${formatInt(hrdiAll.length)} ระเบียน ข้อมูลฝนระดับจังหวัด HII ${formatInt(hiiAll.length)} ระเบียน และจุดความร้อนดาวเทียม ${formatInt(hotspotTotal)} รายการ`;
   }
 }
 
 /**
- * Render Comparability Notice & Toggle Switch
+ * Update Summary Completeness Cards on Q5
  */
-function renderComparabilityNotice(state) {
-  const container = document.getElementById('rainfall-comparability-banner');
-  if (!container) return;
+function renderQualitySummaryCards(state, hrdi2022, hrdi2023, hrdiAll, hiiAll, hotspotTotal) {
+  const matchedStations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
+  const owmCount = matchedStations.filter(s => s.source_type === 'OpenWeatherMap').length;
+  const hrdiSensorCount = matchedStations.filter(s => s.source_type === 'HRDI Weather Station').length;
 
-  container.innerHTML = `
-    <div class="notice-box ${state.rainfallComparable ? 'warning' : 'info'}" style="margin-bottom: 1.25rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-        <div>
-          <strong style="color: #ffffff;">ข้อควรระวังเชิงระเบียบวิธีวิจัยและมาตราส่วนข้อมูล (Q3 & Q4):</strong><br>
-          ข้อมูลฝน HRDI ตรวจวัดเฉพาะจุดบนสถานีพื้นที่สูง (Highland Station Point) ขณะที่ข้อมูลฝน HII เป็นค่าประมาณเฉลี่ยภาพรวมระดับจังหวัด (Area-weighted Provincial Average) 
-          การคำนวณผลต่างเชิงตัวเลข (HRDI − HII) อาจมีความคลาดเคลื่อนทางกายภาพ จึงแนะนำให้สำรวจแนวโน้มรายเดือนร่วมกันเป็นกราฟคู่
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
-          <label for="toggle-rainfall-comparable" style="font-size: 0.8rem; font-weight: 600; cursor: pointer; color: #cbd5e1;">
-            เปิดการคำนวณผลต่างเชิงตัวเลข:
-          </label>
-          <input type="checkbox" id="toggle-rainfall-comparable" ${state.rainfallComparable ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;" onchange="window.toggleRainfallComparable(this.checked)">
-        </div>
-      </div>
-    </div>
-  `;
+  const stVal = document.getElementById('q5-stations-val');
+  const stSub = document.getElementById('q5-stations-sub');
+  if (stVal) stVal.textContent = `${matchedStations.length} สถานี`;
+  if (stSub) stSub.textContent = `OpenWeatherMap: ${owmCount} แห่ง · HRDI Weather Station: ${hrdiSensorCount} แห่ง`;
+
+  const recVal = document.getElementById('q5-hrdi-records-val');
+  const recSub = document.getElementById('q5-hrdi-records-sub');
+  if (recVal) recVal.textContent = `${formatInt(hrdiAll.length)} ระเบียน`;
+  if (recSub) recSub.textContent = `ปี 2022: ${formatInt(hrdi2022.length)} ระเบียน (ม.ค.–ธ.ค.) · ปี 2023: ${formatInt(hrdi2023.length)} ระเบียน (ม.ค.–ก.ย.)`;
+
+  const hiiVal = document.getElementById('q5-hii-records-val');
+  const hiiSub = document.getElementById('q5-hii-records-sub');
+  if (hiiVal) hiiVal.textContent = `${formatInt(hiiAll.length)} ระเบียน`;
+  if (hiiSub) hiiSub.textContent = `ข้อมูลฝนระดับจังหวัด HII (ครบ 12 เดือนทั้งปี 2022 และ 2023)`;
+
+  const hsVal = document.getElementById('q5-hotspot-records-val');
+  const hsSub = document.getElementById('q5-hotspot-records-sub');
+  if (hsVal) hsVal.textContent = `${formatInt(hotspotTotal)} รายการ`;
+  if (hsSub) hsSub.textContent = `จากทั้งหมด 106,036 รายการตรวจพบดาวเทียม VIIRS (24 พาร์ทิชันรายเดือน)`;
 }
 
 /**
- * Render Dual-Series Monthly Time Series (Q3)
+ * Render Record Completeness by Province Bar Chart (2022 vs 2023)
  */
-function renderDualRainfallTimeSeries(state, hrdi2022, hrdi2023, hii2022, hii2023) {
-  const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  const labels = months.map(m => THAI_MONTH_NAMES[m - 1]);
-  const datasets = [];
-
-  if (state.yearMode === '2022' || state.yearMode === 'compare') {
-    const hrdiVals = months.map(m => calculateMean(hrdi2022.filter(r => r.month === m), 'rainfall').mean);
-    const hiiVals = months.map(m => calculateMean(hii2022.filter(r => r.month === m), 'hii_avg_rain').mean);
-
-    datasets.push({
-      label: 'ฝนสถานี HRDI 2022 (มม.)',
-      data: hrdiVals,
-      borderColor: '#f59e0b',
-      backgroundColor: 'rgba(245, 158, 11, 0.1)',
-      borderWidth: 2,
-      tension: 0.3,
-      spanGaps: false,
-      pointRadius: 4
-    });
-
-    datasets.push({
-      label: 'ฝนจังหวัด HII 2022 (มม.)',
-      data: hiiVals,
-      borderColor: '#fcd34d',
-      borderDash: [5, 5],
-      borderWidth: 2,
-      tension: 0.3,
-      spanGaps: false,
-      pointRadius: 3
-    });
-  }
-
-  if (state.yearMode === '2023' || state.yearMode === 'compare') {
-    const hrdiVals = months.map(m => calculateMean(hrdi2023.filter(r => r.month === m), 'rainfall').mean);
-    const hiiVals = months.map(m => calculateMean(hii2023.filter(r => r.month === m), 'hii_avg_rain').mean);
-
-    datasets.push({
-      label: 'ฝนสถานี HRDI 2023 (มม.)',
-      data: hrdiVals,
-      borderColor: '#06b6d4',
-      backgroundColor: 'rgba(6, 182, 212, 0.1)',
-      borderWidth: 2,
-      tension: 0.3,
-      spanGaps: false,
-      pointRadius: 4
-    });
-
-    datasets.push({
-      label: 'ฝนจังหวัด HII 2023 (มม.)',
-      data: hiiVals,
-      borderColor: '#a5f3fc',
-      borderDash: [5, 5],
-      borderWidth: 2,
-      tension: 0.3,
-      spanGaps: false,
-      pointRadius: 3
-    });
-  }
-
-  renderLineChart('rainfall-dual-series-chart', {
-    labels,
-    datasets
-  }, {
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: (context) => ` ${context.dataset.label}: ${context.parsed.y !== null ? context.parsed.y.toFixed(1) + ' มม.' : 'ไม่มีข้อมูล'}`
-        }
-      }
-    },
-    scales: {
-      y: {
-        title: { display: true, text: 'ปริมาณน้ำฝน (มิลลิเมตร)', color: '#94a3b8', font: { size: 11 } }
-      }
-    }
-  });
-}
-
-/**
- * Render Provincial Comparison Bar Chart (Q4)
- */
-function renderProvincialRainfallComparison(state) {
+function renderCompletenessByProvinceChart(state) {
   const db = getDb();
-  const targetYear = state.yearMode === 'compare' ? 2022 : Number(state.yearMode);
-  const selectedMonths = new Set(state.selectedMonths);
+  const stateNoProv = { ...state, province: null, district: null, tambon: null, stationId: null };
+  const rows22 = filterStationMonthRecords(db.hrdiStationMonth, stateNoProv, 2022);
+  const rows23 = filterStationMonthRecords(db.hrdiStationMonth, stateNoProv, 2023);
 
-  const provData = STUDY_PROVINCES.map(prov => {
-    const hrdiList = db.hrdiStationMonth.filter(r =>
-      r.province === prov && r.year === targetYear && selectedMonths.has(r.month)
-    );
-    const hrdiMean = calculateMean(hrdiList, 'rainfall').mean;
+  const provStats = STUDY_PROVINCES.map(prov => ({
+    province: prov,
+    c2022: rows22.filter(r => r.province === prov).length,
+    c2023: rows23.filter(r => r.province === prov).length
+  }));
 
-    const hiiList = db.hiiProvinceMonth.filter(r =>
-      r.province === prov && r.year === targetYear && selectedMonths.has(r.month)
-    );
-    const hiiMean = calculateMean(hiiList, 'hii_avg_rain').mean;
-    const diff = (hrdiMean !== null && hiiMean !== null) ? hrdiMean - hiiMean : null;
-
-    return {
-      province: prov,
-      hrdiMean,
-      hiiMean,
-      diff,
-      stationCount: new Set(hrdiList.map(r => r.station_id)).size
-    };
-  });
-
-  if (state.rainfallComparable) {
-    provData.sort((a, b) => (Math.abs(b.diff || 0)) - (Math.abs(a.diff || 0)));
-  }
-
-  const labels = provData.map(d => `${d.province} (${d.stationCount} สถานี)`);
-  let datasets = [];
-
-  if (state.rainfallComparable) {
-    datasets = [{
-      label: `ผลต่าง (HRDI สถานี − HII จังหวัด) ปี ${targetYear} (มม.)`,
-      data: provData.map(d => d.diff),
-      backgroundColor: provData.map(d => (d.diff >= 0 ? '#0d9488' : '#ef4444')),
-      borderRadius: 4
-    }];
-  } else {
-    datasets = [
+  renderBarChart('quality-completeness-chart', {
+    labels: provStats.map(p => p.province),
+    datasets: [
       {
-        label: `ฝนเฉลี่ยสถานี HRDI (${targetYear})`,
-        data: provData.map(d => d.hrdiMean),
-        backgroundColor: '#0d9488',
-        borderRadius: 4
+        label: 'ระเบียนปี 2022 (ครบ 12 เดือน)',
+        data: provStats.map(p => p.c2022),
+        backgroundColor: YEAR_COLORS.y2022,
+        borderRadius: 5
       },
       {
-        label: `ฝนเฉลี่ยระดับจังหวัด HII (${targetYear})`,
-        data: provData.map(d => d.hiiMean),
-        backgroundColor: '#0284c7',
-        borderRadius: 4
+        label: 'ระเบียนปี 2023 (มีข้อมูล ม.ค.–ก.ย.)',
+        data: provStats.map(p => p.c2023),
+        backgroundColor: YEAR_COLORS.y2023,
+        borderRadius: 5
       }
-    ];
-  }
-
-  renderBarChart('rainfall-provincial-comparison-chart', {
-    labels,
-    datasets
+    ]
   }, {
+    showValueLabels: true,
     onClick: (evt, elements) => {
       if (elements && elements.length > 0) {
         const idx = elements[0].index;
-        const clickedProvince = STUDY_PROVINCES[idx];
-        setState({ province: clickedProvince });
-      }
-    },
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: (context) => ` ${context.dataset.label}: ${context.parsed.y !== null ? context.parsed.y.toFixed(1) + ' มม.' : 'ไม่มีข้อมูล'}`
+        const clickedProv = provStats[idx]?.province;
+        if (clickedProv) {
+          setState({ province: state.province === clickedProv ? null : clickedProv });
         }
       }
     },
     scales: {
       y: {
-        title: {
-          display: true,
-          text: state.rainfallComparable ? 'ผลต่าง (มม.)' : 'ปริมาณน้ำฝน (มม.)',
-          color: '#94a3b8',
-          font: { size: 11 }
-        }
+        title: { display: true, text: 'จำนวนระเบียนสถานี-เดือนที่มีข้อมูลจริง (คลิกจังหวัดเพื่อกรอง)' }
       }
     }
   });
+}
+
+/**
+ * Render Weather Source Breakdown Chart (OpenWeatherMap vs HRDI Weather Station)
+ */
+function renderWeatherSourceDistributionChart(state) {
+  const db = getDb();
+  const sources = ['OpenWeatherMap', 'HRDI Weather Station'];
+
+  const stationCounts = sources.map(src =>
+    db.stations.filter(s => (!state.province || s.province === state.province) && s.source_type === src).length
+  );
+
+  const recordCounts = sources.map(src =>
+    db.hrdiStationMonth.filter(r =>
+      (!state.province || r.province === state.province) &&
+      state.selectedMonths.includes(r.month) &&
+      (state.yearMode === 'compare' ? [2022, 2023] : [Number(state.yearMode)]).includes(r.year) &&
+      r.source_type === src
+    ).length
+  );
+
+  renderBarChart('quality-source-comparison-chart', {
+    labels: ['OpenWeatherMap (ข้อมูล API พื้นที่สูง)', 'HRDI Weather Station (สถานีตรวจวัดภาคสนาม)'],
+    datasets: [
+      {
+        label: 'จำนวนสถานีตรวจวัด (แห่ง)',
+        data: stationCounts,
+        backgroundColor: '#0B96B5',
+        borderRadius: 6
+      },
+      {
+        label: 'จำนวนระเบียนในช่วงเวลาที่เลือก (ระเบียน)',
+        data: recordCounts,
+        backgroundColor: '#168B68',
+        borderRadius: 6
+      }
+    ]
+  }, {
+    showValueLabels: true,
+    onClick: (evt, elements) => {
+      if (elements && elements.length > 0) {
+        const idx = elements[0].index;
+        const targetSource = sources[idx];
+        if (targetSource) {
+          setState({ weatherSource: state.weatherSource === targetSource ? 'all' : targetSource });
+        }
+      }
+    },
+    scales: {
+      y: {
+        title: { display: true, text: 'จำนวน (คลิกที่แท่งเพื่อกรองแหล่งข้อมูล Weather Source)' }
+      }
+    }
+  });
+}
+
+/**
+ * Render Interactive Station Metadata & Completeness Table
+ */
+function renderStationCompletenessTable(state) {
+  const container = document.getElementById('quality-station-table-container');
+  if (!container) return;
+
+  const db = getDb();
+  const stations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
+
+  let html = `
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding-left:10px;">รหัสและชื่อสถานี (คลิกเพื่อกรอง)</th>
+          <th>แหล่งข้อมูล (source_type)</th>
+          <th>จังหวัด</th>
+          <th>อำเภอ / ตำบล</th>
+          <th>พิกัด (Lat, Lon)</th>
+          <th>ระเบียนปี 2022</th>
+          <th>ระเบียนปี 2023 (ม.ค.–ก.ย.)</th>
+          <th>รวมระเบียนที่มีจริง</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  if (stations.length === 0) {
+    html += `<tr><td colspan="8" style="text-align:center; padding: 1.5rem; color: #43627A;">ไม่พบสถานีตามตัวกรองที่เลือก</td></tr>`;
+  }
+
+  for (const s of stations) {
+    const r22 = db.hrdiStationMonth.filter(r => r.station_id === s.station_id && r.year === 2022).length;
+    const r23 = db.hrdiStationMonth.filter(r => r.station_id === s.station_id && r.year === 2023).length;
+    const total = r22 + r23;
+    const isSelected = state.stationId === s.station_id;
+
+    html += `
+      <tr class="${isSelected ? 'matrix-row-selected' : ''}" style="cursor:pointer;" onclick="window.selectStation('${s.station_id}', '${s.province}', '${s.district || ''}', '${s.tambon || ''}')">
+        <td style="text-align:left; padding-left:10px; font-weight:700; color:#102E47;">
+          ${escapeHtml(s.station_id)} — ${escapeHtml(s.station_name)}
+        </td>
+        <td>
+          <span class="source-type-badge ${s.source_type === 'HRDI Weather Station' ? 'hrdi-sensor' : 'owm'}">
+            ${escapeHtml(s.source_type)}
+          </span>
+        </td>
+        <td style="font-weight:600;">${escapeHtml(s.province)}</td>
+        <td>${escapeHtml(s.district || '-')} / ${escapeHtml(s.tambon || '-')}</td>
+        <td style="font-family:monospace; font-size:0.75rem;">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</td>
+        <td><strong>${r22}</strong> / 12 เดือน</td>
+        <td><strong>${r23}</strong> / 9 เดือน</td>
+        <td><strong style="color:#0B96B5;">${total}</strong> ระเบียน</td>
+      </tr>
+    `;
+  }
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }

@@ -3,747 +3,1062 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Highland Climate &amp; Hotspot Intelligence (2022–2023)</title>
-  <meta name="description" content="ศูนย์วิเคราะห์ภูมิอากาศ ปริมาณน้ำฝน และจุดความร้อนบนพื้นที่สูง 9 จังหวัดของประเทศไทย ปี 2022–2023">
+  <title>สภาพภูมิอากาศและจุดความร้อนบนพื้นที่สูง (ปี 2022–2023) | Highland Climate &amp; Hotspot Dashboard</title>
 
-  <!-- Google Fonts: Sarabun -->
+  <!-- Google Fonts: Sarabun & Noto Sans Thai -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Leaflet CSS & MarkerCluster CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <!-- Leaflet 1.9.4 CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <!-- Application Stylesheet -->
+  <!-- Leaflet.markercluster 1.5.3 CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <!-- Dashboard Custom Styles (Clean Cinematic Highland Glass Theme) -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
+  <!-- Atmospheric Mist Overlay (Respects prefers-reduced-motion) -->
+  <div class="atmospheric-mist-layer" aria-hidden="true"></div>
+
   <!-- Loading Overlay -->
-  <div id="app-loading-overlay" class="loading-overlay" style="position: fixed; inset: 0; background: #08111e; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-    <div class="spinner" style="width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #22d3ee; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem;"></div>
-    <div id="app-loading-text" style="color: #f8fafc; font-weight: 600; font-size: 1rem;">กำลังโหลดข้อมูลแพลตฟอร์ม...</div>
-    <div style="color: #94a3b8; font-size: 0.82rem; margin-top: 4px;">ประมวลผลข้อมูล 50 สถานี HRDI, 216 HII และ 106,036 รายการจุดความร้อน</div>
+  <div id="app-loading-overlay">
+    <div class="loading-glass-card">
+      <div class="spinner-ring"></div>
+      <div style="font-size: 1.05rem; font-weight: 800; color: #102E47;">กำลังเตรียมข้อมูลสภาพภูมิอากาศและจุดความร้อน</div>
+      <div id="app-loading-text" style="font-size: 0.85rem; color: #43627A;">กำลังโหลดชุดข้อมูลจริง...</div>
+    </div>
   </div>
 
-  <!-- Header / Hero Section -->
-  <header class="dashboard-header">
-    <div class="header-top">
-      <div class="brand-wrapper">
-        <div class="brand-logo-svg">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m8 3 4 8 5-5 5 15H2L8 3z"></path>
-          </svg>
+  <!-- Main Dashboard Wrapper -->
+  <div class="dashboard-wrapper">
+
+    <!-- 1. HERO HEADER (Clean, Short & Immediately Understandable) -->
+    <header class="hero-header">
+      <div class="hero-brand-row">
+        <div class="brand-badge">
+          <div class="brand-logo-circle" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#19C5D8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m8 3 4 8 5-5 5 15H2L8 3z"></path>
+              <path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2.89 8.23.19"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="brand-kicker">Highland Climate &amp; Hotspot Dashboard</div>
+            <h1 class="hero-title">สภาพภูมิอากาศและจุดความร้อนบนพื้นที่สูง</h1>
+            <p class="hero-subtitle">สำรวจข้อมูล 9 จังหวัดในประเทศไทย ปี 2022–2023</p>
+          </div>
         </div>
-        <div class="brand-title">
-          <h1>Highland Climate &amp; Hotspot Intelligence</h1>
-          <div class="subtitle">การวิเคราะห์แนวโน้มสภาพภูมิอากาศและความสัมพันธ์กับจุดความร้อนบนพื้นที่สูง 9 จังหวัดของประเทศไทย ปี 2022–2023</div>
+        <div class="hero-meta-badges">
+          <span class="hero-pill">ข้อมูลจริง: ปี 2022–2023</span>
+          <span class="hero-pill">9 จังหวัด · 50 สถานี</span>
         </div>
       </div>
-      <div class="header-meta">
-        <div class="meta-badge highlight">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          2022–2023 ONLY
-        </div>
-        <div class="meta-badge">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          50 สถานี HRDI
-        </div>
-        <div class="meta-badge">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          106,036 จุดความร้อน VIIRS
-        </div>
-      </div>
-    </div>
-  </header>
 
-  <!-- Top Navigation Tabs (5 Tabs - No emojis) -->
-  <nav class="nav-tabs-wrapper">
-    <div class="nav-tabs">
-      <button class="nav-tab-btn active" data-tab="overview">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        <span>ภาพรวมพื้นที่ศึกษา</span>
-      </button>
-      <button class="nav-tab-btn" data-tab="climate">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>
-        <span>ภูมิอากาศพื้นที่สูง</span>
-      </button>
-      <button class="nav-tab-btn" data-tab="rainfall">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><line x1="8" y1="19" x2="8" y2="21"></line><line x1="16" y1="19" x2="16" y2="21"></line><line x1="12" y1="21" x2="12" y2="23"></line></svg>
-        <span>เปรียบเทียบฝน HRDI และ HII</span>
-      </button>
-      <button class="nav-tab-btn" data-tab="hotspots">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
-        <span>สำรวจจุดความร้อน</span>
-      </button>
-      <button class="nav-tab-btn" data-tab="correlation">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-        <span>ความสัมพันธ์สภาพอากาศกับจุดความร้อน</span>
-      </button>
-    </div>
-  </nav>
+      <!-- 2. HORIZONTAL NAVIGATION TABS (Short & Clear Q1 – Q5) -->
+      <nav class="nav-tabs-bar" aria-label="หมวดการวิเคราะห์หลัก">
+        <button type="button" class="nav-tab-btn active" data-tab="overview">
+          <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span class="tab-main-title">Q1 — ภาพรวม</span>
+        </button>
+        <button type="button" class="nav-tab-btn" data-tab="climate">
+          <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          <span class="tab-main-title">Q2 — แนวโน้ม</span>
+        </button>
+        <button type="button" class="nav-tab-btn" data-tab="hotspots">
+          <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+          <span class="tab-main-title">Q3 — จุดความร้อน</span>
+        </button>
+        <button type="button" class="nav-tab-btn" data-tab="correlation">
+          <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7.5" r="2.5"></circle><circle cx="16.5" cy="16.5" r="2.5"></circle><path d="M3 21 21 3"></path></svg>
+          <span class="tab-main-title">Q4 — ความสัมพันธ์</span>
+        </button>
+        <button type="button" class="nav-tab-btn" data-tab="rainfall">
+          <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          <span class="tab-main-title">Q5 — ข้อมูลและที่มา</span>
+        </button>
+      </nav>
+    </header>
 
-  <!-- Global Filter Panel (Frosted Glass) -->
-  <section class="filter-bar-container">
-    <div class="filter-glass-card">
-      <div class="filter-bar-row">
-        <!-- Year Segmented Controls -->
+    <!-- 3. TWO-LEVEL GLOBAL FILTER BAR (4 Primary Filters + Collapsible Advanced Filters) -->
+    <section class="global-filter-bar" aria-label="ตัวกรองข้อมูลส่วนกลาง">
+      <div class="filter-bar-row-main">
+        <!-- Primary Filter 1: ปี (Year Mode) -->
         <div class="filter-group">
-          <label>ปีการศึกษา:</label>
+          <span class="filter-label">1. ปีที่ศึกษา</span>
           <div class="segmented-control">
-            <button class="segment-btn" data-year="2022">2022</button>
-            <button class="segment-btn" data-year="2023">2023</button>
-            <button class="segment-btn active" data-year="compare">เปรียบเทียบ 2022–2023</button>
+            <button type="button" class="segment-btn" data-year="2022">ปี 2022</button>
+            <button type="button" class="segment-btn" data-year="2023">ปี 2023</button>
+            <button type="button" class="segment-btn active" data-year="compare">เปรียบเทียบ</button>
           </div>
         </div>
 
-        <!-- Month Picker Popover -->
+        <!-- Primary Filter 2: เดือน (Month Selector) -->
         <div class="filter-group" style="position: relative;">
-          <label>ช่วงเดือน:</label>
-          <button id="btn-month-picker-toggle" class="btn-filter-action">
-            ม.ค. - ก.ย. (เปรียบเทียบยุติธรรม)
+          <span class="filter-label">2. ช่วงเดือน</span>
+          <button type="button" id="btn-month-picker-toggle" class="filter-btn-trigger">
+            ม.ค. – ก.ย. (เปรียบเทียบ 9 เดือน)
           </button>
-          <div id="month-picker-modal" class="month-picker-modal">
-            <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; color: #ffffff;">เลือกช่วงเดือนศึกษา</div>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem;">
-              การเปรียบเทียบรายปี (YoY) ควรใช้ ม.ค.–ก.ย. เนื่องจากข้อมูล HRDI ปี 2023 สิ้นสุดในเดือนกันยายน
-            </div>
-            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.6rem;">
-              <button id="btn-month-fair" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(6,182,212,0.2); color: #22d3ee; border: 1px solid rgba(6,182,212,0.4); border-radius: 4px; cursor: pointer; font-weight: 600;">ม.ค. - ก.ย. (Fair YoY)</button>
-              <button id="btn-month-all" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(255,255,255,0.06); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer;">ทุกเดือน (12 เดือน)</button>
+          <div id="month-picker-modal" class="month-picker-popover">
+            <div class="month-popover-header">
+              <span>เลือกเดือนที่ต้องการวิเคราะห์ (คลิกได้หลายเดือน)</span>
+              <div class="month-popover-actions">
+                <button type="button" id="btn-month-fair" class="btn-mini-action" title="ช่วงเดือน ม.ค.–ก.ย. ที่ข้อมูล HRDI มีครบทั้งสองปี">ม.ค.–ก.ย. (HRDI ครบ)</button>
+                <button type="button" id="btn-month-all" class="btn-mini-action">ทั้งปี (12 เดือน)</button>
+              </div>
             </div>
             <div id="month-grid-container" class="month-grid"></div>
           </div>
         </div>
 
-        <!-- Dataset-Aware Geographic Dropdowns -->
+        <!-- Primary Filter 3: จังหวัด (Province) -->
         <div class="filter-group">
-          <label>จังหวัด:</label>
+          <label class="filter-label" for="filter-province">3. จังหวัด</label>
           <select id="filter-province" class="filter-select">
             <option value="">ทุกจังหวัด (9 จังหวัดศึกษา)</option>
           </select>
         </div>
 
+        <!-- Primary Filter 4: ตัวชี้วัด (Climate Metric) -->
         <div class="filter-group">
-          <label>อำเภอ:</label>
-          <select id="filter-district" class="filter-select">
-            <option value="">ทุกอำเภอ</option>
+          <label class="filter-label" for="filter-climate-metric">4. ตัวชี้วัดหลัก</label>
+          <select id="filter-climate-metric" class="filter-select">
+            <option value="temp">อุณหภูมิเฉลี่ย (°C)</option>
+            <option value="humidity">ความชื้นสัมพัทธ์ (%)</option>
+            <option value="rainfall">ปริมาณน้ำฝนสถานี (มม.)</option>
+            <option value="wind_speed">ความเร็วลม (ม./วินาที)</option>
+            <option value="temp_min">อุณหภูมิต่ำสุด (°C)</option>
+            <option value="temp_max">อุณหภูมิสูงสุด (°C)</option>
           </select>
         </div>
 
-        <div class="filter-group">
-          <label>ตำบล:</label>
-          <select id="filter-tambon" class="filter-select">
-            <option value="">ทุกตำบล</option>
-          </select>
+        <!-- Action Buttons: ตัวกรองเพิ่มเติม + ภาพรวม 9 จังหวัด + รีเซ็ตทั้งหมด -->
+        <div class="filter-actions-group">
+          <button type="button" id="btn-toggle-advanced-filters" class="btn-advanced-toggle" aria-expanded="false" aria-controls="advanced-filters-panel">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            <span>ตัวกรองเพิ่มเติม</span>
+            <span id="advanced-filter-count-badge" class="adv-count-badge" style="display: none;">0</span>
+          </button>
+
+          <button type="button" id="btn-quick-study-overview" class="btn-secondary-glass" title="คืนมุมมองพื้นที่เป็นภาพรวม 9 จังหวัด">
+            ภาพรวม 9 จังหวัด
+          </button>
+
+          <button type="button" id="btn-reset-filters" class="btn-reset-all" title="ล้างตัวกรองทั้งหมดกลับเป็นค่าเริ่มต้น">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+            <span>รีเซ็ตทั้งหมด</span>
+          </button>
         </div>
-
-        <div class="filter-group">
-          <label>สถานี:</label>
-          <select id="filter-station" class="filter-select" style="min-width: 170px;">
-            <option value="">ทุกสถานี (50 แห่ง)</option>
-          </select>
-        </div>
-
-        <!-- Quick 9-Province View Button -->
-        <button id="btn-quick-study-overview" class="btn-filter-action highlight" title="แสดงภาพรวมทั้ง 9 จังหวัด">
-          ภาพรวม 9 จังหวัด
-        </button>
-
-        <!-- Reset Button -->
-        <button id="btn-reset-filters" class="btn-reset-filters">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-          รีเซ็ตตัวกรอง
-        </button>
       </div>
 
-      <!-- Active Filter Chips -->
-      <div class="active-chips-row">
-        <span style="color: #94a3b8; font-weight: 600;">ตัวกรองที่ใช้งาน:</span>
-        <div id="active-filter-chips" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
-      </div>
-    </div>
-  </section>
+      <!-- LEVEL 2: COLLAPSIBLE ADVANCED FILTERS DRAWER -->
+      <div id="advanced-filters-panel" class="advanced-filters-panel" aria-hidden="true">
+        <div class="advanced-filters-grid">
+          <!-- Cascading Geo: District -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-district">อำเภอ</label>
+            <select id="filter-district" class="filter-select">
+              <option value="">ทุกอำเภอ</option>
+            </select>
+          </div>
 
-  <!-- 5 KPI Cards Row (Matching Primary Reference Screenshot) -->
-  <section style="padding: 0 2rem; max-width: 1600px; width: 100%; margin: 0 auto;">
-    <div class="kpi-row">
-      <!-- 1. Temperature KPI -->
-      <div class="kpi-card">
-        <div class="kpi-icon-box rose">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>
+          <!-- Cascading Geo: Tambon -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-tambon">ตำบล</label>
+            <select id="filter-tambon" class="filter-select">
+              <option value="">ทุกตำบล</option>
+            </select>
+          </div>
+
+          <!-- Cascading Geo: Station -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-station">สถานีตรวจวัด</label>
+            <select id="filter-station" class="filter-select">
+              <option value="">ทุกสถานี (50 แห่ง)</option>
+            </select>
+          </div>
+
+          <!-- Weather Source (source_type) -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-weather-source">แหล่งข้อมูลอากาศ</label>
+            <select id="filter-weather-source" class="filter-select">
+              <option value="all">ทุกแหล่ง (50 สถานี)</option>
+              <option value="OpenWeatherMap">OpenWeatherMap (47 สถานี)</option>
+              <option value="HRDI Weather Station">HRDI Weather Station (3 สถานี)</option>
+            </select>
+          </div>
+
+          <!-- Rainfall KPI Source -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-rainfall-source">แหล่ง KPI ฝน</label>
+            <select id="filter-rainfall-source" class="filter-select">
+              <option value="hrdi">สถานี HRDI (มม./สถานี)</option>
+              <option value="hii">จังหวัด HII (มม./จังหวัด)</option>
+            </select>
+          </div>
+
+          <!-- Hotspot Elevation -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-hotspot-elevation">ระดับความสูงจุดความร้อน</label>
+            <select id="filter-hotspot-elevation" class="filter-select">
+              <option value="all">ทุกระดับความสูง</option>
+              <option value="high">สูงกว่า 500 เมตร</option>
+              <option value="low">ไม่เกิน 500 เมตร</option>
+            </select>
+          </div>
+
+          <!-- Hotspot Land Use -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-hotspot-landuse">ประเภทการใช้ประโยชน์ที่ดิน</label>
+            <select id="filter-hotspot-landuse" class="filter-select">
+              <option value="all">ทุกการใช้ประโยชน์ที่ดิน</option>
+            </select>
+          </div>
+
+          <!-- Hotspot Project -->
+          <div class="filter-group">
+            <label class="filter-label" for="filter-hotspot-project">พื้นที่โครงการ HRDI</label>
+            <select id="filter-hotspot-project" class="filter-select">
+              <option value="all">ทุกพื้นที่ (ในและนอกโครงการ)</option>
+              <option value="in_project">เฉพาะในพื้นที่โครงการ HRDI</option>
+              <option value="outside">เฉพาะนอกพื้นที่โครงการ</option>
+            </select>
+          </div>
         </div>
-        <div class="kpi-content">
-          <div class="kpi-label">อุณหภูมิเฉลี่ย</div>
+      </div>
+
+      <!-- Secondary Filter Status & Active Chips Row -->
+      <div class="filter-bar-row-chips">
+        <div id="active-filter-chips" class="chips-list"></div>
+        <div class="filter-bar-meta-right">
+          <span id="filter-scope-notice" class="scope-warning-pill" style="display: none;"></span>
+          <span id="weather-source-scope-badge" class="scope-info-pill">สถานีภูมิอากาศ: 50 แห่ง</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         TAB Q1: ภาพรวม (OVERVIEW - Q1, Q2, Q5, Q9)
+         =================================================================== -->
+    <main id="page-overview" class="page-view active">
+
+      <!-- 4. 5 CLEAN KPI CARDS IN 1 ROW ON DESKTOP -->
+      <section class="kpi-row-5" aria-label="ตัวชี้วัดหลัก 5 ด้าน">
+
+        <!-- KPI 1: Mean Temperature -->
+        <article class="glass-card kpi-card kpi-temp kpi-card-active" data-kpi-metric="temp">
+          <div class="kpi-card-top">
+            <div class="kpi-icon-box temp">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path>
+              </svg>
+            </div>
+            <div class="kpi-title-group">
+              <span class="kpi-title">อุณหภูมิเฉลี่ย</span>
+            </div>
+            <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณอุณหภูมิเฉลี่ย" data-popover-target="pop-kpi-temp">i</button>
+          </div>
           <div class="kpi-value-row">
-            <span id="kpi-temp-val" class="kpi-value">--</span>
+            <span id="kpi-temp-val" class="kpi-main-number">—</span>
             <span class="kpi-unit">°C</span>
           </div>
-          <div id="kpi-temp-sub" class="kpi-subtext">คำนวณจากสถานีที่รายงาน</div>
-        </div>
-      </div>
+          <div id="kpi-temp-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+          <div id="pop-kpi-temp" class="info-popover-box" role="tooltip">
+            <strong>วิธีคำนวณ:</strong> ค่าเฉลี่ยเลขคณิตของอุณหภูมิรายเดือน (<code>temp</code>) จากสถานีตรวจวัดที่เข้าเงื่อนไข (ไม่รวมเดือนที่ไม่มีข้อมูล)<br>
+            <span id="kpi-temp-meta-detail">ชุดข้อมูล: <code>hrdi_station_month.json</code></span>
+          </div>
+        </article>
 
-      <!-- 2. Humidity KPI -->
-      <div class="kpi-card">
-        <div class="kpi-icon-box blue">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-        </div>
-        <div class="kpi-content">
-          <div class="kpi-label">ความชื้นเฉลี่ย</div>
+        <!-- KPI 2: Mean Relative Humidity -->
+        <article class="glass-card kpi-card kpi-humidity" data-kpi-metric="humidity">
+          <div class="kpi-card-top">
+            <div class="kpi-icon-box humidity">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+              </svg>
+            </div>
+            <div class="kpi-title-group">
+              <span class="kpi-title">ความชื้นสัมพัทธ์</span>
+            </div>
+            <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณความชื้นสัมพัทธ์" data-popover-target="pop-kpi-humidity">i</button>
+          </div>
           <div class="kpi-value-row">
-            <span id="kpi-humidity-val" class="kpi-value">--</span>
+            <span id="kpi-humidity-val" class="kpi-main-number">—</span>
             <span class="kpi-unit">%</span>
           </div>
-          <div id="kpi-humidity-sub" class="kpi-subtext">ความชื้นสัมพัทธ์</div>
-        </div>
-      </div>
-
-      <!-- 3. Rainfall KPI -->
-      <div class="kpi-card">
-        <div class="kpi-icon-box teal">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><line x1="8" y1="19" x2="8" y2="21"></line><line x1="16" y1="19" x2="16" y2="21"></line><line x1="12" y1="21" x2="12" y2="23"></line></svg>
-        </div>
-        <div class="kpi-content">
-          <div class="kpi-label">ปริมาณฝนเฉลี่ย</div>
-          <div class="kpi-value-row">
-            <span id="kpi-rainfall-val" class="kpi-value">--</span>
-            <span class="kpi-unit">มม./เดือน</span>
+          <div id="kpi-humidity-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+          <div id="pop-kpi-humidity" class="info-popover-box" role="tooltip">
+            <strong>วิธีคำนวณ:</strong> ค่าเฉลี่ยเลขคณิตของความชื้นสัมพัทธ์รายเดือน (<code>humidity</code>) จากสถานีตรวจวัดที่เข้าเงื่อนไข<br>
+            <span id="kpi-humidity-meta-detail">ชุดข้อมูล: <code>hrdi_station_month.json</code></span>
           </div>
-          <div id="kpi-rainfall-sub" class="kpi-subtext">เฉลี่ยต่อสถานีที่รายงาน</div>
-        </div>
-      </div>
+        </article>
 
-      <!-- 4. Hotspots Total KPI -->
-      <div class="kpi-card">
-        <div class="kpi-icon-box amber">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
-        </div>
-        <div class="kpi-content">
-          <div class="kpi-label">จุดความร้อนรวม</div>
-          <div class="kpi-value-row">
-            <span id="kpi-hotspots-val" class="kpi-value">--</span>
-            <span class="kpi-unit">รายการ</span>
+        <!-- KPI 3: Mean Rainfall -->
+        <article class="glass-card kpi-card kpi-rain" data-kpi-metric="rainfall">
+          <div class="kpi-card-top">
+            <div class="kpi-icon-box rain">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                <path d="M16 14v6"></path>
+                <path d="M8 14v6"></path>
+                <path d="M12 16v6"></path>
+              </svg>
+            </div>
+            <div class="kpi-title-group">
+              <span id="kpi-rainfall-title" class="kpi-title">ปริมาณน้ำฝนเฉลี่ย</span>
+            </div>
+            <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณปริมาณน้ำฝนเฉลี่ย" data-popover-target="pop-kpi-rain">i</button>
           </div>
-          <div id="kpi-hotspots-sub" class="kpi-subtext">ตรวจพบจากดาวเทียม</div>
-        </div>
-      </div>
-
-      <!-- 5. Study Provinces Count KPI -->
-      <div class="kpi-card">
-        <div class="kpi-icon-box cyan">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-        </div>
-        <div class="kpi-content">
-          <div class="kpi-label">จำนวนจังหวัดที่ศึกษา</div>
           <div class="kpi-value-row">
-            <span id="kpi-provinces-val" class="kpi-value">9</span>
+            <span id="kpi-rainfall-val" class="kpi-main-number">—</span>
+            <span class="kpi-unit">มม.</span>
+          </div>
+          <div id="kpi-rainfall-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+          <div id="pop-kpi-rain" class="info-popover-box" role="tooltip">
+            <strong>วิธีคำนวณ:</strong> ค่าเฉลี่ยปริมาณน้ำฝนรายเดือนต่อสถานี (HRDI) หรือระดับจังหวัด (HII) ตามแหล่งที่เลือกในตัวกรองเพิ่มเติม<br>
+            <span id="kpi-rainfall-meta-detail">ชุดข้อมูล: <code>hrdi_station_month.json</code></span>
+          </div>
+        </article>
+
+        <!-- KPI 4: Satellite Hotspot Detections -->
+        <article class="glass-card kpi-card kpi-hotspot" data-kpi-metric="hotspots">
+          <div class="kpi-card-top">
+            <div class="kpi-icon-box hotspot">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+              </svg>
+            </div>
+            <div class="kpi-title-group">
+              <span class="kpi-title">จุดความร้อนจากดาวเทียม</span>
+            </div>
+            <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณจุดความร้อนจากดาวเทียม" data-popover-target="pop-kpi-hotspot">i</button>
+          </div>
+          <div class="kpi-value-row">
+            <span id="kpi-hotspots-val" class="kpi-main-number">—</span>
+            <span class="kpi-unit">จุด</span>
+          </div>
+          <div id="kpi-hotspots-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+          <div id="pop-kpi-hotspot" class="info-popover-box" role="tooltip">
+            <strong>วิธีคำนวณ:</strong> ผลรวมจำนวนรายการตรวจพบจุดความร้อนจากดาวเทียม VIIRS ตามเงื่อนไขตัวกรองร่วมทั้งหมด (ไม่ใช่จำนวนครั้งที่เกิดไฟป่า)<br>
+            <span id="kpi-hotspots-meta-detail">ชุดข้อมูล: <code>hotspot_multidim_index.json</code></span>
+          </div>
+        </article>
+
+        <!-- KPI 5: Active Study Provinces -->
+        <article class="glass-card kpi-card kpi-province">
+          <div class="kpi-card-top">
+            <div class="kpi-icon-box province">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </div>
+            <div class="kpi-title-group">
+              <span class="kpi-title">จังหวัดที่ศึกษา</span>
+            </div>
+            <button type="button" class="info-popover-btn" aria-label="ดูรายละเอียดขอบเขตจังหวัดที่ศึกษา" data-popover-target="pop-kpi-province">i</button>
+          </div>
+          <div class="kpi-value-row">
+            <span id="kpi-provinces-val" class="kpi-main-number">9</span>
             <span class="kpi-unit">จังหวัด</span>
           </div>
-          <div id="kpi-provinces-sub" class="kpi-subtext">จังหวัดพื้นที่ศึกษา</div>
-        </div>
-      </div>
-    </div>
-  </section>
+          <div id="kpi-provinces-sub" class="kpi-sub-meta">จากพื้นที่ศึกษา 9 จังหวัด</div>
+          <div id="pop-kpi-province" class="info-popover-box" role="tooltip">
+            <strong>วิธีคำนวณ:</strong> จำนวนจังหวัดที่มีข้อมูลจริงภายใต้ตัวกรองปัจจุบัน (จากพื้นที่ศึกษาทั้งหมด 9 จังหวัด ได้แก่ เชียงราย เชียงใหม่ แม่ฮ่องสอน ลำปาง ลำพูน แพร่ น่าน ตาก และพิษณุโลก)
+          </div>
+        </article>
 
-  <!-- Main Content Views Container -->
-  <main class="main-content">
+      </section>
 
-    <!-- ======================================================================
-         PAGE 1: ภาพรวมพื้นที่ศึกษา (OVERVIEW - Q1, Q5, Q9)
-         ====================================================================== -->
-    <section id="page-overview" class="page-view active">
-      <div class="bento-grid">
-        <!-- Interactive 77-Province Thailand Map Card (col-7) -->
-        <div class="bento-card col-7">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>แผนที่ประเทศไทย 77 จังหวัด และพื้นที่ศึกษา 9 จังหวัด</h2>
-              <div class="card-subtitle">คลิกจังหวัดพื้นที่ศึกษาเพื่อเปิดแผงข้อมูลรายละเอียด | ลากเส้นเลื่อนเปรียบเทียบปี 2022 และ 2023</div>
-            </div>
-            <!-- Swipe Metric Toggle & Study Overview Button -->
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <div class="metric-toggle-group">
-                <button class="metric-tab-btn btn-swipe-metric active" data-metric="temp">อุณหภูมิ</button>
-                <button class="metric-tab-btn btn-swipe-metric" data-metric="rainfall">ปริมาณฝน</button>
-                <button class="metric-tab-btn btn-swipe-metric" data-metric="hotspots">จุดความร้อน</button>
+      <!-- 5. MAIN ANALYTICS BENTO GRID (Left 44% Choropleth Map | Right 56% Trend + Ranking & Distribution) -->
+      <section class="bento-main-grid">
+
+        <!-- LEFT 44%: Pure GeoJSON Choropleth Map (No API Key Required) -->
+        <div class="glass-card bento-map-card">
+          <div class="card-header-bar map-card-header">
+            <div class="title-with-info">
+              <div>
+                <div class="title-row-inline">
+                  <h2 id="overview-map-title" class="card-title">จังหวัดไหนมีอุณหภูมิสูงหรือต่ำกว่ากัน?</h2>
+                  <button type="button" class="info-popover-btn" aria-label="ข้อมูลแผนที่" data-popover-target="pop-map-q1">i</button>
+                </div>
+                <p id="overview-map-subtitle" class="card-subtitle">คลิกจังหวัดบนแผนที่เพื่อกรองข้อมูล · แสดง 9 จังหวัดศึกษาเทียบกับบริบทประเทศไทย 77 จังหวัด</p>
               </div>
-              <span class="card-q-tag">Q1, Q5, Q9</span>
+              <div id="pop-map-q1" class="info-popover-box" role="tooltip">
+                <strong>แผนที่ Choropleth (GeoJSON 77 จังหวัด):</strong> ไม่พึ่งพาแผ่นแผนที่ภายนอกที่ต้องใช้ API Key · โหมดเปรียบเทียบจะคำนวณผลต่าง (ปี 2023 − ปี 2022) ในช่วงเดือนเดียวกัน
+              </div>
+            </div>
+
+            <div class="map-controls-toolbar">
+              <!-- 3 Year Mode Buttons on Map (Synced with Global Year Mode) -->
+              <div class="segmented-control map-year-segmented" aria-label="เลือกโหมดปีของแผนที่">
+                <button type="button" class="map-year-btn" data-year="2022">ปี 2022</button>
+                <button type="button" class="map-year-btn" data-year="2023">ปี 2023</button>
+                <button type="button" class="map-year-btn active" data-year="compare">เปรียบเทียบ</button>
+              </div>
+
+              <!-- Metric Pills -->
+              <div class="card-pill-controls">
+                <button type="button" class="btn-swipe-metric active" data-metric="temp">อุณหภูมิ</button>
+                <button type="button" class="btn-swipe-metric" data-metric="humidity">ความชื้น</button>
+                <button type="button" class="btn-swipe-metric" data-metric="rainfall">ปริมาณฝน</button>
+                <button type="button" class="btn-swipe-metric" data-metric="hotspots">จุดความร้อน</button>
+              </div>
+
+              <!-- Station Marker Toggle -->
+              <button type="button" id="btn-toggle-map-stations" class="btn-station-toggle" title="เปิด/ปิดจุดสถานีตรวจวัดภูมิอากาศ 50 แห่งบนแผนที่">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span>แสดงสถานีตรวจวัด</span>
+              </button>
             </div>
           </div>
 
-          <div class="card-body">
-            <!-- Year floating badges for Swipe mode -->
-            <div id="overview-map-swipe-badges" style="display: none;">
-              <span class="map-badge-year left">2022</span>
-              <span class="map-badge-year right">2023</span>
+          <div class="map-frame-wrapper">
+            <div id="overview-map-container" class="leaflet-map-box"></div>
+
+            <!-- Mode Status Pill on Map -->
+            <div id="overview-map-mode-banner" class="map-mode-banner">
+              โหมดเปรียบเทียบ: แสดงผลต่าง ปี 2023 เทียบกับ ปี 2022 (คลิกจังหวัดเพื่อดูรายละเอียด)
             </div>
 
-            <div id="overview-map-container" class="map-container"></div>
-
-            <!-- Docked Province Detail Panel (slides in on province click) -->
-            <div id="overview-province-docked-panel" class="province-docked-panel"></div>
+            <!-- Docked Province Detail Panel -->
+            <aside id="overview-province-docked-panel" class="province-docked-panel" aria-label="รายละเอียดจังหวัดที่เลือก"></aside>
           </div>
         </div>
 
-        <!-- Monthly Trend Line Chart (col-5) -->
-        <div class="bento-card col-5">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>แนวโน้มรายเดือน (ทุกจังหวัด)</h2>
-              <div class="card-subtitle">เปรียบเทียบปี 2022 และ 2023 (ไม่พยากรณ์อนาคต)</div>
+        <!-- RIGHT 56%: Top Monthly Trend Chart + Bottom 2-Column Ranking & Box Plot -->
+        <div class="bento-right-column">
+
+          <!-- Right Top: Monthly Trend Chart -->
+          <div class="glass-card bento-trend-card">
+            <div class="card-header-bar">
+              <div class="title-with-info">
+                <div class="title-row-inline">
+                  <h2 id="overview-trend-title" class="card-title">ปี 2022 กับ 2023 ต่างกันอย่างไรในแต่ละเดือน?</h2>
+                  <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟแนวโน้มรายเดือน" data-popover-target="pop-trend-q1">i</button>
+                </div>
+                <p id="overview-trend-scope-note" class="card-subtitle">คลิกจุดข้อมูลเดือนบนกราฟเพื่อกรองเฉพาะเดือนนั้น</p>
+                <div id="pop-trend-q1" class="info-popover-box" role="tooltip">
+                  <strong>การเปรียบเทียบรายเดือน (Q1 &amp; Q5):</strong> ข้อมูลสถานี HRDI ปี 2023 มีถึงเดือนกันยายน เดือน ต.ค.–ธ.ค. 2023 จึงเว้นว่างไว้โดยไม่แทนค่าเป็นศูนย์
+                </div>
+              </div>
+              <div class="card-pill-controls">
+                <button type="button" class="trend-metric-tab-btn active" data-metric="temp">อุณหภูมิ</button>
+                <button type="button" class="trend-metric-tab-btn" data-metric="humidity">ความชื้น</button>
+                <button type="button" class="trend-metric-tab-btn" data-metric="rainfall">ปริมาณฝน</button>
+                <button type="button" class="trend-metric-tab-btn" data-metric="hotspots">จุดความร้อน</button>
+              </div>
             </div>
-            <!-- Trend Metric Tab Buttons -->
-            <div class="metric-toggle-group">
-              <button class="metric-tab-btn trend-metric-tab-btn active" data-metric="temp">อุณหภูมิ</button>
-              <button class="metric-tab-btn trend-metric-tab-btn" data-metric="humidity">ความชื้น</button>
-              <button class="metric-tab-btn trend-metric-tab-btn" data-metric="rainfall">ปริมาณฝน</button>
-              <button class="metric-tab-btn trend-metric-tab-btn" data-metric="hotspots">จุดความร้อน</button>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="chart-container" style="height: 480px;">
+            <div class="chart-box-medium">
               <canvas id="overview-monthly-trend-chart"></canvas>
             </div>
           </div>
+
+          <!-- Right Bottom: Province Ranking + Box Plot Distribution -->
+          <div class="bento-bottom-subgrid">
+
+            <!-- Province Ranking -->
+            <div class="glass-card bento-subcard">
+              <div class="card-header-bar compact">
+                <div class="title-with-info">
+                  <div class="title-row-inline">
+                    <h2 id="overview-ranking-title" class="card-title">จังหวัดไหนมีอุณหภูมิสูงที่สุด?</h2>
+                    <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟจัดอันดับจังหวัด" data-popover-target="pop-rank-q1">i</button>
+                  </div>
+                  <p id="overview-ranking-subtitle" class="card-subtitle">คลิกที่แท่งจังหวัดเพื่อกรองข้อมูลทั้งหน้า</p>
+                  <div id="pop-rank-q1" class="info-popover-box" role="tooltip">
+                    <strong>การจัดอันดับจังหวัด (Q5 &amp; Q9):</strong> เรียงลำดับจากค่าจริงภายใต้ตัวกรองที่เลือก คลิกแท่งจังหวัดเพื่อกรองหรือยกเลิกการเลือกจังหวัด
+                  </div>
+                </div>
+              </div>
+              <div class="chart-box-medium">
+                <canvas id="overview-province-ranking-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Box Plot Data Distribution -->
+            <div class="glass-card bento-subcard">
+              <div class="card-header-bar compact">
+                <div class="title-with-info">
+                  <div class="title-row-inline">
+                    <h2 id="overview-distribution-title" class="card-title">อุณหภูมิแต่ละจังหวัดต่างกันแค่ไหน?</h2>
+                    <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟการกระจายตัว" data-popover-target="pop-dist-q1">i</button>
+                  </div>
+                  <p id="overview-distribution-subtitle" class="card-subtitle">แสดงช่วงค่าต่ำสุด–สูงสุด ค่ากลาง (Median) และค่าเฉลี่ยของแต่ละจังหวัด</p>
+                  <div id="pop-dist-q1" class="info-popover-box" role="tooltip">
+                    <strong>การกระจายตัวแบบ Box Plot (Q2):</strong> กล่องแสดงช่วงควอไทล์ที่ 1 ถึง 3 (Q1–Q3) เส้นขวางคือค่ามัธยฐาน (Median) จุดกลมคือค่าเฉลี่ย (Mean) และเส้นหนวดคือค่าต่ำสุด–สูงสุด (Min–Max)
+                  </div>
+                </div>
+              </div>
+              <div class="chart-box-medium">
+                <canvas id="overview-distribution-chart"></canvas>
+              </div>
+            </div>
+
+          </div>
         </div>
 
-        <!-- Province Hotspot Ranking Bar Chart (col-6) -->
-        <div class="bento-card col-6">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>จังหวัดที่มีค่าสูงสุด (ตามตัวชี้วัด)</h2>
-              <div class="card-subtitle">จัดอันดับรายการตรวจพบจุดความร้อนดาวเทียมรายจังหวัด (คลิกแท่งเพื่อกรอง)</div>
-            </div>
-            <span class="card-q-tag">Q5</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container">
-              <canvas id="overview-province-ranking-chart"></canvas>
-            </div>
-          </div>
-        </div>
+      </section>
 
-        <!-- Data Distribution Chart (col-6 - Reference bottom-right card) -->
-        <div class="bento-card col-6">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>การกระจายตัวของข้อมูลภูมิอากาศ</h2>
-              <div class="card-subtitle">อุณหภูมิต่ำสุด ค่าเฉลี่ย และอุณหภูมิสูงสุดรายจังหวัด</div>
-            </div>
-            <span class="card-q-tag">Q2</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container">
-              <canvas id="overview-distribution-chart"></canvas>
-            </div>
-          </div>
+      <!-- 6. DYNAMIC KEY INSIGHTS SECTION (สิ่งที่น่าสนใจ - Q1) -->
+      <section class="glass-card insight-banner-card" aria-label="สิ่งที่น่าสนใจจากข้อมูลในหน้าภาพรวม">
+        <div class="insight-badge-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>สิ่งที่น่าสนใจ</span>
         </div>
-      </div>
-    </section>
+        <p id="insight-q1" class="insight-text">กำลังสรุปข้อค้นพบสำคัญจากข้อมูลที่เลือก...</p>
+      </section>
 
-    <!-- ======================================================================
-         PAGE 2: ภูมิอากาศพื้นที่สูง (HIGHLAND CLIMATE - Q1, Q2)
-         ====================================================================== -->
+    </main>
+
+    <!-- ===================================================================
+         TAB Q2: แนวโน้ม (CLIMATE & SEASONAL TRENDS - Q1, Q2, Q3)
+         =================================================================== -->
     <section id="page-climate" class="page-view">
-      <!-- Metric Selector Bar -->
-      <div class="bento-card" style="margin-bottom: 1.25rem; padding: 0.85rem 1.25rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <label style="font-weight: 700; font-size: 0.85rem; color: #ffffff;">เลือกตัวชี้วัดสภาพภูมิอากาศ:</label>
-            <select id="filter-climate-metric" class="filter-select" style="min-width: 200px;">
-              <option value="temp">อุณหภูมิเฉลี่ย (°C)</option>
-              <option value="temp_min">อุณหภูมิต่ำสุด (°C)</option>
-              <option value="temp_max">อุณหภูมิสูงสุด (°C)</option>
-              <option value="rainfall">ปริมาณน้ำฝน (มม.)</option>
-              <option value="humidity">ความชื้นสัมพัทธ์ (%)</option>
-              <option value="wind_speed">ความเร็วลม (ม./วินาที)</option>
-            </select>
+
+      <!-- Dynamic Key Insights (Q2) -->
+      <div class="glass-card insight-banner-card" style="margin-bottom: 0.75rem;">
+        <div class="insight-badge-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>สิ่งที่น่าสนใจ</span>
+        </div>
+        <p id="insight-q2" class="insight-text">กำลังสรุปแนวโน้มรายเดือนและฤดูกาล...</p>
+      </div>
+
+      <!-- Summary Banner Cards -->
+      <div class="subpage-kpi-grid-3">
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">ค่าเฉลี่ยตัวชี้วัดที่เลือก (สถานี HRDI)</span>
+          <div class="kpi-value-row">
+            <span id="climate-metric-mean-val" class="kpi-main-number">—</span>
+            <span id="climate-metric-unit" class="kpi-unit">°C</span>
           </div>
-          <div style="display: flex; gap: 1rem; align-items: center;">
-            <div style="font-size: 0.85rem;">
-              <span style="color: #94a3b8;">ค่าเฉลี่ยตัวชี้วัด:</span>
-              <strong id="climate-metric-mean-val" style="font-size: 1.25rem; color: #22d3ee; margin-left: 4px;">--</strong>
-              <span id="climate-metric-unit" style="color: #94a3b8;">°C</span>
+          <div id="climate-metric-sub" class="kpi-sub-meta">—</div>
+        </div>
+
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">ช่วงค่าต่ำสุด – สูงสุดที่วัดได้จริง</span>
+          <div id="climate-metric-minmax" class="sub-kpi-highlight-text">—</div>
+          <div class="kpi-sub-meta">คำนวณจากข้อมูลจริงรายสถานี–เดือน</div>
+        </div>
+
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">ปริมาณน้ำฝนเฉลี่ยระดับจังหวัด (HII)</span>
+          <div id="climate-hii-rain-summary" class="sub-kpi-highlight-text">—</div>
+          <div class="kpi-sub-meta">ข้อมูลระดับจังหวัด (ครบ 12 เดือนทั้งปี 2022–2023)</div>
+        </div>
+      </div>
+
+      <!-- Charts Row: Monthly Time Series + Seasonal Pattern -->
+      <div class="subpage-grid-2">
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 id="climate-timeseries-title" class="card-title">แนวโน้มรายเดือนเปลี่ยนไปอย่างไร?</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟแนวโน้มรายเดือน" data-popover-target="pop-q2-ts">i</button>
+              </div>
+              <p class="card-subtitle">คลิกจุดข้อมูลเดือนเพื่อกรองช่วงเวลา · ข้อมูลสถานีปี 2023 มีถึงเดือน ก.ย.</p>
+              <div id="pop-q2-ts" class="info-popover-box" role="tooltip">
+                <strong>แนวโน้มรายเดือน (Q1):</strong> แสดงค่าเฉลี่ยรายเดือนของปี 2022 เทียบกับปี 2023 ตามตัวชี้วัดหลักที่เลือก
+              </div>
             </div>
-            <div id="climate-metric-sub" style="font-size: 0.78rem; color: #94a3b8;"></div>
-            <div id="climate-metric-minmax" style="font-size: 0.78rem; color: #64748b;"></div>
+          </div>
+          <div class="chart-box-tall">
+            <canvas id="climate-time-series-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 id="climate-seasonal-title" class="card-title">ฤดูหนาว ฤดูร้อน และฤดูฝนต่างกันแค่ไหน?</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟฤดูกาล" data-popover-target="pop-q2-season">i</button>
+              </div>
+              <p class="card-subtitle">คลิกที่แท่งฤดูกาลเพื่อกรองกลุ่มเดือนตามฤดูกาลนั้นทันที</p>
+              <div id="pop-q2-season" class="info-popover-box" role="tooltip">
+                <strong>นิยามฤดูกาลไทย:</strong> ฤดูหนาว (พ.ย.–ก.พ.) · ฤดูร้อน (มี.ค.–พ.ค.) · ฤดูฝน (มิ.ย.–ต.ค.)
+              </div>
+            </div>
+          </div>
+          <div class="chart-box-tall">
+            <canvas id="climate-seasonal-chart"></canvas>
           </div>
         </div>
       </div>
 
-      <div class="bento-grid">
-        <!-- Monthly Time Series Chart (Q1) -->
-        <div class="bento-card col-7">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>แนวโน้มรายเดือนของตัวชี้วัดที่เลือก (2022 vs 2023)</h2>
-              <div class="card-subtitle">เปรียบเทียบเฉพาะสถานีและเดือนที่มีข้อมูลบันทึกจริง (ไม่พยากรณ์อนาคต)</div>
+      <!-- Station Ranking + Station x Month Heatmap Matrix -->
+      <div class="subpage-grid-2" style="margin-top: 1rem;">
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 id="climate-station-rank-title" class="card-title">สถานีตรวจวัดไหนมีค่าสูงที่สุด?</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลการจัดอันดับสถานี" data-popover-target="pop-q2-station">i</button>
+              </div>
+              <p class="card-subtitle">แสดง 15 อันดับแรก · คลิกที่แท่งสถานีเพื่อกรองเฉพาะสถานีนั้น</p>
+              <div id="pop-q2-station" class="info-popover-box" role="tooltip">
+                <strong>เปรียบเทียบรายสถานี (Q2):</strong> คำนวณค่าเฉลี่ยจากระเบียนรายเดือนของแต่ละสถานีภายใต้ช่วงเวลาและตัวกรองที่เลือก
+              </div>
             </div>
-            <span class="card-q-tag">Q1</span>
           </div>
-          <div class="card-body">
-            <div class="chart-container tall">
-              <canvas id="climate-time-series-chart"></canvas>
-            </div>
+          <div class="chart-box-tall">
+            <canvas id="climate-station-ranking-chart"></canvas>
           </div>
         </div>
 
-        <!-- Station Ranking Bar Chart (Q2) -->
-        <div class="bento-card col-5">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>อันดับสถานีตรวจวัดตามค่าตัวชี้วัด</h2>
-              <div class="card-subtitle">คลิกแท่งกราฟเพื่อเจาะลึกเฉพาะสถานีนั้นและดูรัศมี 10 กม.</div>
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">แต่ละสถานีมีค่าในแต่ละเดือนเป็นอย่างไร?</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลตารางเมทริกซ์รายสถานี" data-popover-target="pop-q2-matrix">i</button>
+              </div>
+              <p class="card-subtitle">คลิกชื่อสถานีในตารางเพื่อกรองข้อมูลระดับสถานี</p>
+              <div id="pop-q2-matrix" class="info-popover-box" role="tooltip">
+                <strong>ตารางเมทริกซ์สถานี × เดือน:</strong> แสดงค่าจริงรายเดือนของแต่ละสถานี ช่องที่ไม่มีการตรวจวัดจะแสดงขีด (—)
+              </div>
             </div>
-            <span class="card-q-tag">Q2</span>
           </div>
-          <div class="card-body">
-            <div class="chart-container tall">
-              <canvas id="climate-station-ranking-chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Station x Month Heatmap (Q2) -->
-        <div class="bento-card col-12">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>ตาราง Heatmap สภาพภูมิอากาศรายสถานี × 12 เดือน</h2>
-              <div class="card-subtitle">สำรวจความแตกต่างระหว่างสถานี (แดช "—" คือไม่มีข้อมูลสังเกตการณ์จริง ไม่ใช่ศูนย์)</div>
-            </div>
-            <span class="card-q-tag">Q2</span>
-          </div>
-          <div class="card-body">
-            <div id="climate-heatmap-container" class="matrix-heatmap-wrapper"></div>
-          </div>
+          <div id="climate-heatmap-container" class="matrix-scroll-wrapper"></div>
         </div>
       </div>
+
     </section>
 
-    <!-- ======================================================================
-         PAGE 3: เปรียบเทียบฝน HRDI และ HII (Q3, Q4)
-         ====================================================================== -->
-    <section id="page-rainfall" class="page-view">
-      <!-- Comparability Banner & Guardrail Toggle -->
-      <div id="rainfall-comparability-banner"></div>
+    <!-- ===================================================================
+         TAB Q3: จุดความร้อน (HOTSPOT EXPLORER - Q5)
+         =================================================================== -->
+    <section id="page-hotspots" class="page-view">
 
-      <!-- KPI Summary Row for Rainfall -->
-      <div class="kpi-row" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 1.25rem;">
-        <div class="kpi-card">
-          <div class="kpi-icon-box teal">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><line x1="8" y1="19" x2="8" y2="21"></line><line x1="16" y1="19" x2="16" y2="21"></line><line x1="12" y1="21" x2="12" y2="23"></line></svg>
+      <!-- Dynamic Key Insights (Q3) -->
+      <div class="glass-card insight-banner-card" style="margin-bottom: 0.75rem;">
+        <div class="insight-badge-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>สิ่งที่น่าสนใจ</span>
+        </div>
+        <p id="insight-q3" class="insight-text">กำลังสรุปรูปแบบการกระจายตัวของจุดความร้อน...</p>
+      </div>
+
+      <!-- Hotspot Summary KPIs -->
+      <div class="subpage-kpi-grid-3">
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">จุดความร้อนจากดาวเทียมทั้งหมด (VIIRS)</span>
+          <div class="kpi-value-row">
+            <span id="hotspots-total-kpi-val" class="kpi-main-number">—</span>
+            <span class="kpi-unit">จุด</span>
           </div>
-          <div class="kpi-content">
-            <div class="kpi-label">ฝนเฉลี่ยสถานีพื้นที่สูง HRDI (Mean Station Rain)</div>
-            <div class="kpi-value-row">
-              <span id="rainfall-hrdi-val" class="kpi-value">--</span>
-              <span class="kpi-unit">มม.</span>
+          <div id="hotspots-total-kpi-sub" class="kpi-sub-meta">—</div>
+        </div>
+
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">จุดความร้อนบนพื้นที่สูง (&gt; 500 เมตร)</span>
+          <div id="hotspots-high-elev-kpi-val" class="sub-kpi-highlight-text">—</div>
+          <div class="kpi-sub-meta">คำนวณตามตัวกรองที่เลือกทั้งหมด</div>
+        </div>
+
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">จุดความร้อนในเขตโครงการพัฒนาพื้นที่สูง (HRDI)</span>
+          <div id="hotspots-in-project-kpi-val" class="sub-kpi-highlight-text">—</div>
+          <div class="kpi-sub-meta">คำนวณตามตัวกรองที่เลือกทั้งหมด</div>
+        </div>
+      </div>
+
+      <!-- Hotspot Map + Temporal & District Charts -->
+      <div class="bento-main-grid">
+        <!-- Left: Hotspot Cluster Map -->
+        <div class="glass-card bento-map-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">จุดความร้อนกระจุกตัวอยู่ที่ไหน?</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลแผนที่จุดความร้อน" data-popover-target="pop-q3-map">i</button>
+              </div>
+              <p class="card-subtitle">คลิกที่จุดตรวจพบบนแผนที่เพื่อดูวันที่ พิกัด จังหวัด อำเภอ และรายละเอียดจริง</p>
+              <div id="pop-q3-map" class="info-popover-box" role="tooltip">
+                <strong>แผนที่คลัสเตอร์จุดความร้อน (NASA VIIRS):</strong> แสดงตำแหน่งจุดความร้อนจริงรายเหตุการณ์บนแผนที่ประเทศไทยโดยไม่ต้องใช้ API Key
+              </div>
             </div>
-            <div id="rainfall-hrdi-sub" class="kpi-subtext">เฉลี่ยต่อสถานีที่รายงาน</div>
+            <div>
+              <span id="hotspots-map-count-badge" class="scope-info-pill">กำลังโหลด...</span>
+            </div>
+          </div>
+
+          <div class="map-frame-wrapper">
+            <div id="hotspots-map-container" class="leaflet-map-box"></div>
+            <div id="hotspots-map-loading-indicator" class="map-floating-loader" style="display: none;">
+              กำลังโหลดพาร์ทิชันจุดความร้อนรายเดือน...
+            </div>
+          </div>
+
+          <div class="selected-event-footer">
+            <div class="selected-event-header">รายละเอียดจุดความร้อนที่เลือก (คลิกจุดบนแผนที่เพื่อเปลี่ยน):</div>
+            <div id="hotspots-selected-event-detail" class="selected-event-body">กำลังเตรียมข้อมูล...</div>
           </div>
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-icon-box blue">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-          </div>
-          <div class="kpi-content">
-            <div class="kpi-label">ฝนเฉลี่ยระดับจังหวัด HII (Province-level Rain)</div>
-            <div class="kpi-value-row">
-              <span id="rainfall-hii-val" class="kpi-value">--</span>
-              <span class="kpi-unit">มม.</span>
+        <!-- Right: Temporal Trend, District Ranking, Land Use, Elevation, Project -->
+        <div class="bento-right-column">
+          <div class="subpage-grid-2">
+            <div class="glass-card">
+              <div class="card-header-bar compact">
+                <div class="title-row-inline">
+                  <h2 class="card-title">จุดความร้อนเกิดมากช่วงเดือนไหน?</h2>
+                </div>
+                <p class="card-subtitle">คลิกจุดเดือนเพื่อกรองช่วงเวลา</p>
+              </div>
+              <div class="chart-box-small">
+                <canvas id="hotspots-monthly-chart"></canvas>
+              </div>
             </div>
-            <div id="rainfall-hii-sub" class="kpi-subtext">เฉลี่ยภาพรวมระดับจังหวัด</div>
+
+            <div class="glass-card">
+              <div class="card-header-bar compact">
+                <div class="title-row-inline">
+                  <h2 class="card-title">อำเภอไหนพบจุดความร้อนมากที่สุด?</h2>
+                </div>
+                <p class="card-subtitle">คลิกแท่งอำเภอเพื่อกรองจังหวัดและอำเภอ</p>
+              </div>
+              <div class="chart-box-small">
+                <canvas id="hotspots-district-ranking-chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="subpage-grid-3">
+            <div class="glass-card">
+              <div class="card-header-bar compact">
+                <div class="title-row-inline">
+                  <h2 class="card-title">เกิดในที่ดินประเภทใด?</h2>
+                </div>
+                <p class="card-subtitle">คลิกเพื่อกรองประเภทที่ดิน</p>
+              </div>
+              <div class="chart-box-small">
+                <canvas id="hotspots-landuse-chart"></canvas>
+              </div>
+            </div>
+
+            <div class="glass-card">
+              <div class="card-header-bar compact">
+                <div class="title-row-inline">
+                  <h2 class="card-title">อยู่บนพื้นที่สูงแค่ไหน?</h2>
+                </div>
+                <p class="card-subtitle">คลิกเพื่อกรอง &gt;500 ม. / ≤500 ม.</p>
+              </div>
+              <div class="chart-box-small">
+                <canvas id="hotspots-elevation-chart"></canvas>
+              </div>
+            </div>
+
+            <div class="glass-card">
+              <div class="card-header-bar compact">
+                <div class="title-row-inline">
+                  <h2 class="card-title">อยู่ในเขตโครงการ HRDI ไหม?</h2>
+                </div>
+                <p class="card-subtitle">คลิกเพื่อกรองใน/นอกโครงการ</p>
+              </div>
+              <div class="chart-box-small">
+                <canvas id="hotspots-project-chart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="bento-grid">
-        <!-- Dual-Series Monthly Line Chart (Q3) -->
-        <div class="bento-card col-12">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>กราฟเปรียบเทียบแนวโน้มฝนรายเดือน: สถานีพื้นที่สูง HRDI vs ฝนจังหวัด HII</h2>
-              <div class="card-subtitle">เส้นทึบ: ค่าเฉลี่ยฝนสถานี HRDI | เส้นประ: ค่าเฉลี่ยฝนระดับจังหวัด HII ตามปีและเดือนเดียวกัน</div>
+    </section>
+
+    <!-- ===================================================================
+         TAB Q4: ความสัมพันธ์ (CORRELATION & RAINFALL COMPARISON - Q3, Q4, Q6–Q8)
+         =================================================================== -->
+    <section id="page-correlation" class="page-view">
+
+      <!-- Dynamic Key Insights (Q4) -->
+      <div class="glass-card insight-banner-card" style="margin-bottom: 0.75rem;">
+        <div class="insight-badge-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>สิ่งที่น่าสนใจ</span>
+        </div>
+        <p id="insight-q4" class="insight-text">กำลังสรุปความสัมพันธ์ระหว่างสภาพภูมิอากาศและจุดความร้อน...</p>
+      </div>
+
+      <!-- Methodological Notice Container -->
+      <div id="correlation-method-container"></div>
+
+      <!-- Scatter Plots Row 1: Q6 Rainfall vs Hotspots & Q7a Temp vs Hotspots -->
+      <div class="subpage-grid-2">
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">ฝนกับจุดความร้อนเกี่ยวข้องกันไหม? (Q6)</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟฝนกับจุดความร้อน" data-popover-target="pop-q6">i</button>
+              </div>
+              <p class="card-subtitle">ปริมาณน้ำฝนสถานีเทียบกับจุดความร้อนในรัศมี 10 กม. · คลิกจุดเพื่อเลือกสถานี</p>
+              <div id="pop-q6" class="info-popover-box" role="tooltip">
+                <strong>การวิเคราะห์สหสัมพันธ์ (Q6):</strong> จับคู่ข้อมูลรายเดือนของสถานีกับจำนวนจุดความร้อนในรัศมี 10 กม. รอบสถานี เส้นประแสดงแนวโน้มเชิงสถิติย้อนหลัง (ไม่ใช่การพยากรณ์)
+              </div>
             </div>
-            <span class="card-q-tag">Q3</span>
+            <span id="q6-r-badge" class="scope-info-pill">—</span>
           </div>
-          <div class="card-body">
-            <div class="chart-container tall">
+          <div class="chart-box-medium">
+            <canvas id="q6-rainfall-hotspots-scatter"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">อุณหภูมิที่สูงขึ้นเกี่ยวข้องกับจุดความร้อนไหม? (Q7 ก)</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟอุณหภูมิกับจุดความร้อน" data-popover-target="pop-q7a">i</button>
+              </div>
+              <p class="card-subtitle">อุณหภูมิเฉลี่ยสถานีเทียบกับจุดความร้อนในรัศมี 10 กม. · คลิกจุดเพื่อเลือกสถานี</p>
+              <div id="pop-q7a" class="info-popover-box" role="tooltip">
+                <strong>สหสัมพันธ์อุณหภูมิ × จุดความร้อน (Q7 ก):</strong> แสดงค่าสัมประสิทธิ์สหสัมพันธ์ Pearson r และจำนวนคู่ข้อมูล N จริง
+              </div>
+            </div>
+            <span id="q7-temp-r-badge" class="scope-info-pill">—</span>
+          </div>
+          <div class="chart-box-medium">
+            <canvas id="q7-temp-hotspots-scatter"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scatter Plots Row 2: Q7b Humidity vs Hotspots & Q8 Lagged Analysis -->
+      <div class="subpage-grid-2" style="margin-top: 1rem;">
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">ความชื้นที่ลดลงเกี่ยวข้องกับจุดความร้อนไหม? (Q7 ข)</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลกราฟความชื้นกับจุดความร้อน" data-popover-target="pop-q7b">i</button>
+              </div>
+              <p class="card-subtitle">ความชื้นสัมพัทธ์สถานีเทียบกับจุดความร้อนในรัศมี 10 กม.</p>
+              <div id="pop-q7b" class="info-popover-box" role="tooltip">
+                <strong>สหสัมพันธ์ความชื้น × จุดความร้อน (Q7 ข):</strong> ความชื้นสัมพัทธ์ที่ต่ำในฤดูแล้งมักสัมพันธ์กับการตรวจพบจุดความร้อนที่เพิ่มขึ้นรอบสถานี
+              </div>
+            </div>
+            <span id="q7-humidity-r-badge" class="scope-info-pill">—</span>
+          </div>
+          <div class="chart-box-medium">
+            <canvas id="q7-humidity-hotspots-scatter"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">อากาศเดือนก่อนหน้าส่งผลต่อจุดความร้อนเดือนถัดไปไหม? (Q8)</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลความสัมพันธ์แบบเหลื่อมเวลา" data-popover-target="pop-q8">i</button>
+              </div>
+              <p id="q8-lag-info" class="card-subtitle">จับคู่เฉพาะเดือนปฏิทินที่ต่อเนื่องกันจริงของสถานีเดียวกัน (Lag t−1 vs t)</p>
+              <div id="pop-q8" class="info-popover-box" role="tooltip">
+                <strong>การวิเคราะห์เหลื่อมเวลา 1 เดือน (Q8):</strong> ทดสอบความสัมพันธ์ระหว่างปริมาณฝน/ความชื้นในเดือน t−1 กับจุดความร้อนในเดือน t ของสถานีเดียวกัน
+              </div>
+            </div>
+          </div>
+          <div class="chart-box-medium">
+            <canvas id="q8-lagged-scatter"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cross-Dataset Rainfall Comparison Section (Q3 & Q4: HRDI vs HII) -->
+      <div class="glass-card" style="margin-top: 1rem;">
+        <div class="card-header-bar">
+          <div class="title-with-info">
+            <div class="title-row-inline">
+              <h2 class="card-title">ข้อมูลฝนจากสถานีพื้นที่สูง (HRDI) กับระดับจังหวัด (HII) ต่างกันอย่างไร? (Q3 &amp; Q4)</h2>
+              <button type="button" class="info-popover-btn" aria-label="ข้อจำกัดการเปรียบเทียบข้อมูลฝนสองแหล่ง" data-popover-target="pop-q3q4">i</button>
+            </div>
+            <p class="card-subtitle">
+              แสดงแนวโน้มคู่ขนานของข้อมูลฝน 2 แหล่ง (ไม่นำค่ามาลบกันโดยตรงเนื่องจากหน่วยพื้นที่ต่างระดับกัน)
+            </p>
+            <div id="pop-q3q4" class="info-popover-box" role="tooltip">
+              <strong>กฎความปลอดภัยของข้อมูล (<code>rainfall_comparable = false</code>):</strong> ฝน HRDI เป็นค่าตรวจวัดเฉพาะจุดสถานีบนพื้นที่สูง (มม./สถานี-เดือน) ส่วนฝน HII เป็นค่าเฉลี่ยระดับจังหวัด (มม./จังหวัด-เดือน) จึงแสดงควบคู่กันเพื่อเปรียบเทียบรูปแบบฤดูกาลเท่านั้น
+            </div>
+          </div>
+          <div class="rainfall-dual-kpi-pills">
+            <div class="mini-stat-box">
+              <span>ฝนสถานีศึกษา HRDI:</span>
+              <strong id="rainfall-hrdi-val">—</strong> <small>มม.</small>
+              <div id="rainfall-hrdi-sub" class="mini-stat-sub">—</div>
+            </div>
+            <div class="mini-stat-box">
+              <span>ฝนระดับจังหวัด HII:</span>
+              <strong id="rainfall-hii-val">—</strong> <small>มม.</small>
+              <div id="rainfall-hii-sub" class="mini-stat-sub">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subpage-grid-2" style="margin-top: 0.75rem;">
+          <div>
+            <h3 class="subchart-heading">ฝนตกมากช่วงเดือนไหนในทั้งสองแหล่งข้อมูล? (Q3 — คลิกเดือนเพื่อกรอง)</h3>
+            <div class="chart-box-medium">
               <canvas id="rainfall-dual-series-chart"></canvas>
             </div>
           </div>
-        </div>
-
-        <!-- Provincial Comparison (Q4) -->
-        <div class="bento-card col-12">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>การกระจายตัวของฝนในแต่ละจังหวัด (9 จังหวัด)</h2>
-              <div class="card-subtitle">เปรียบเทียบปริมาณฝนสถานีพื้นที่สูง HRDI กับฝนจังหวัด HII (คลิกแท่งเพื่อเลือกจังหวัด)</div>
-            </div>
-            <span class="card-q-tag">Q4</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container tall">
+          <div>
+            <h3 class="subchart-heading">แต่ละจังหวัดมีค่าฝนจากสถานี HRDI และจังหวัด HII เท่าไร? (Q4 — คลิกจังหวัดเพื่อกรอง)</h3>
+            <div class="chart-box-medium">
               <canvas id="rainfall-provincial-comparison-chart"></canvas>
             </div>
           </div>
         </div>
       </div>
+
     </section>
 
-    <!-- ======================================================================
-         PAGE 4: สำรวจจุดความร้อน (HOTSPOT EXPLORER - Q5)
-         ====================================================================== -->
-    <section id="page-hotspots" class="page-view">
-      <!-- Hotspot Filter Controls Bar -->
-      <div class="bento-card" style="margin-bottom: 1.25rem; padding: 0.85rem 1.25rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <div class="filter-group">
-              <label>ระดับความสูง:</label>
-              <select id="filter-hotspot-elevation" class="filter-select">
-                <option value="all">ทุกระดับความสูง</option>
-                <option value="high">สูงกว่า 500 เมตร (พื้นที่สูง)</option>
-                <option value="low">ต่ำกว่า 500 เมตร</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label>พื้นที่โครงการ:</label>
-              <select id="filter-hotspot-project" class="filter-select">
-                <option value="all">ทุกพื้นที่</option>
-                <option value="in_project">ในพื้นที่โครงการ HRDI</option>
-                <option value="outside">นอกพื้นที่ดำเนินงาน</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label>การใช้ประโยชน์ที่ดิน:</label>
-              <select id="filter-hotspot-landuse" class="filter-select" style="min-width: 170px;">
-                <option value="all">ทุกการใช้ประโยชน์ที่ดิน</option>
-              </select>
+    <!-- ===================================================================
+         TAB Q5: ข้อมูลและที่มา (DATA SOURCES, COMPLETENESS & METHODOLOGY)
+         =================================================================== -->
+    <section id="page-rainfall" class="page-view">
+
+      <!-- Dynamic Key Insights (Q5) -->
+      <div class="glass-card insight-banner-card" style="margin-bottom: 0.75rem;">
+        <div class="insight-badge-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>สิ่งที่น่าสนใจ</span>
+        </div>
+        <p id="insight-q5" class="insight-text">กำลังสรุปความครบถ้วนและที่มาของชุดข้อมูล...</p>
+      </div>
+
+      <!-- 4 Completeness Summary Cards -->
+      <div class="subpage-kpi-grid-4">
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">สถานีตรวจวัดภูมิอากาศในขอบเขต</span>
+          <div id="q5-stations-val" class="kpi-main-number" style="font-size: 1.55rem;">50 สถานี</div>
+          <div id="q5-stations-sub" class="kpi-sub-meta">OpenWeatherMap: 47 · HRDI Weather Station: 3</div>
+        </div>
+
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">ระเบียนภูมิอากาศรายสถานี–เดือน (HRDI)</span>
+          <div id="q5-hrdi-records-val" class="kpi-main-number" style="font-size: 1.55rem;">977 ระเบียน</div>
+          <div id="q5-hrdi-records-sub" class="kpi-sub-meta">ปี 2022 (12 เดือน) · ปี 2023 (ม.ค.–ก.ย. 9 เดือน)</div>
+        </div>
+
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">ระเบียนน้ำฝนระดับจังหวัด (HII)</span>
+          <div id="q5-hii-records-val" class="kpi-main-number" style="font-size: 1.55rem;">216 ระเบียน</div>
+          <div id="q5-hii-records-sub" class="kpi-sub-meta">9 จังหวัด × 24 เดือน (ครบ 100%)</div>
+        </div>
+
+        <div class="glass-card sub-kpi-card">
+          <span class="kpi-title">จุดความร้อนจากดาวเทียม (VIIRS)</span>
+          <div id="q5-hotspot-records-val" class="kpi-main-number" style="font-size: 1.55rem;">106,036 รายการ</div>
+          <div id="q5-hotspot-records-sub" class="kpi-sub-meta">24 พาร์ทิชันรายเดือน (ม.ค. 2022 – ธ.ค. 2023)</div>
+        </div>
+      </div>
+
+      <!-- Charts Row: Completeness by Province & Source Breakdown -->
+      <div class="subpage-grid-2">
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">จังหวัดไหนมีข้อมูลสถานีครบถ้วนที่สุด?</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลความครบถ้วนรายจังหวัด" data-popover-target="pop-q5-comp">i</button>
+              </div>
+              <p class="card-subtitle">เปรียบเทียบจำนวนระเบียนที่มีการตรวจวัดจริง ปี 2022 กับ ปี 2023 (คลิกจังหวัดเพื่อกรอง)</p>
+              <div id="pop-q5-comp" class="info-popover-box" role="tooltip">
+                <strong>ความครบถ้วนของข้อมูลสถานี:</strong> ปี 2022 มีข้อมูลครบ 12 เดือน ส่วนปี 2023 มีข้อมูลถึงเดือนกันยายน (9 เดือน)
+              </div>
             </div>
           </div>
+          <div class="chart-box-medium">
+            <canvas id="quality-completeness-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">ข้อมูลมาจากแหล่งตรวจวัดใดบ้าง?</h2>
+                <button type="button" class="info-popover-btn" aria-label="ข้อมูลแหล่งที่มาของสถานี" data-popover-target="pop-q5-src">i</button>
+              </div>
+              <p class="card-subtitle">คลิกที่แท่งกราฟเพื่อกรองเฉพาะ OpenWeatherMap หรือ HRDI Weather Station</p>
+              <div id="pop-q5-src" class="info-popover-box" role="tooltip">
+                <strong>แหล่งข้อมูลสถานี (<code>source_type</code>):</strong> ประกอบด้วยข้อมูลจาก OpenWeatherMap (47 สถานี) และสถานีตรวจวัดภาคสนามของสถาบันวิจัยและพัฒนาพื้นที่สูง HRDI Weather Station (3 สถานี)
+              </div>
+            </div>
+          </div>
+          <div class="chart-box-medium">
+            <canvas id="quality-source-comparison-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Methodological Rules & Limitations Card -->
+      <div class="glass-card" style="margin-top: 1rem;">
+        <div class="card-header-bar">
           <div>
-            <span style="font-size: 0.85rem; color: #94a3b8;">ยอดรายการตรวจพบรวม:</span>
-            <strong id="hotspots-total-kpi-val" style="font-size: 1.25rem; color: #f87171; margin-left: 4px;">--</strong>
-            <span style="font-size: 0.78rem; color: #94a3b8;">รายการ</span>
-            <div id="hotspots-total-kpi-sub" style="font-size: 0.75rem; color: #64748b;"></div>
+            <h2 class="card-title">ข้อมูลแต่ละชุดวัดอย่างไรและมีข้อจำกัดอะไรบ้าง?</h2>
+            <p class="card-subtitle">สรุปที่มาของข้อมูล วิธีคำนวณ และข้อควรระวังในการแปลผล</p>
+          </div>
+        </div>
+        <div class="governance-grid-3">
+          <div class="gov-item">
+            <h3>1. ข้อมูลภูมิอากาศพื้นที่สูง (HRDI &amp; OpenWeatherMap)</h3>
+            <p>
+              รวบรวมจากสถานีพื้นที่สูง 50 แห่งใน 9 จังหวัดศึกษา แบ่งเป็นข้อมูลจาก <strong>OpenWeatherMap API (47 สถานี)</strong> และ <strong>สถานีตรวจวัดภาคสนาม HRDI Weather Station (3 สถานี ได้แก่ สำนักงานน่าน, นุชเทียน พิษณุโลก, อุทยานหลวงราชพฤกษ์ เชียงใหม่)</strong> ข้อมูลปี 2023 มีถึงเดือนกันยายนเท่านั้น เดือนตุลาคม–ธันวาคม 2023 ที่ไม่มีข้อมูลจะถูกเว้นว่างไว้และไม่ถูกแทนค่าเป็นศูนย์
+            </p>
+          </div>
+          <div class="gov-item">
+            <h3>2. ข้อมูลปริมาณน้ำฝนระดับจังหวัด (HII)</h3>
+            <p>
+              มาจากสถาบันสารสนเทศทรัพยากรน้ำ (องค์การมหาชน) ครอบคลุม 9 จังหวัดศึกษา ครบทั้ง 12 เดือนของปี 2022 และ 2023 (216 ระเบียน) เป็นค่าเฉลี่ยระดับจังหวัด จึงไม่เปลี่ยนแปลงตามตัวกรองระดับอำเภอ ตำบล สถานี หรือแหล่งสถานี (<code>source_type</code>) และไม่นำมาลบกับค่าฝนเฉพาะจุดของสถานี HRDI โดยตรง
+            </p>
+          </div>
+          <div class="gov-item">
+            <h3>3. ข้อมูลจุดความร้อนจากดาวเทียม (NASA VIIRS)</h3>
+            <p>
+              ประกอบด้วยรายการตรวจพบความผิดปกติทางความร้อน (Hotspot Detections) จำนวน 106,036 รายการ (ไม่ใช่จำนวนครั้งของการเกิดไฟป่าที่ยืนยันแล้ว) รองรับการกรองหลายมิติแบบ <strong>AND</strong> ครบทั้งปี เดือน จังหวัด อำเภอ ตำบล ระดับความสูง (&gt;500 ม. / ≤500 ม.) การใช้ประโยชน์ที่ดิน และพื้นที่โครงการ HRDI ส่วนการวิเคราะห์ความสัมพันธ์กับสถานีภูมิอากาศใช้นิยามรัศมี 10 กิโลเมตรรอบสถานี
+            </p>
           </div>
         </div>
       </div>
 
-      <div class="bento-grid">
-        <!-- Interactive Hotspot Map with Clustering & Partition Lazy-Loading -->
-        <div class="bento-card col-7">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>แผนที่พิกัดจุดความร้อนจากดาวเทียม VIIRS</h2>
-              <div class="card-subtitle">
-                โหลดพิกัดจริงตามพาร์ทิชันรายเดือนที่เลือก &bull; 
-                <span id="hotspots-map-count-badge" style="font-weight: 600; color: #22d3ee;">กำลังประมวลผล...</span>
-              </div>
-            </div>
-            <span class="card-q-tag">Q5</span>
-          </div>
-          <div class="card-body" style="position: relative;">
-            <div id="hotspots-map-loading-indicator" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 1000; background: rgba(15,23,42,0.85); color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem;">
-              กำลังโหลดพาร์ทิชันจุดความร้อน...
-            </div>
-            <div id="hotspots-map-container" class="map-container" style="height: 520px;"></div>
+      <!-- Station Completeness Audit Table -->
+      <div class="glass-card" style="margin-top: 1rem;">
+        <div class="card-header-bar">
+          <div>
+            <h2 class="card-title">สถานีตรวจวัดทั้ง 50 แห่งมีข้อมูลครบกี่เดือน?</h2>
+            <p class="card-subtitle">คลิกที่แถวของสถานีเพื่อกรองข้อมูลเฉพาะสถานีนั้น</p>
           </div>
         </div>
-
-        <!-- District Drilldown Ranking (Q5) -->
-        <div class="bento-card col-5">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>12 อำเภอที่ตรวจพบจุดความร้อนสูงสุด</h2>
-              <div class="card-subtitle">คลิกแท่งกราฟของอำเภอเพื่อเจาะลึกเฉพาะอำเภอนั้น</div>
-            </div>
-            <span class="card-q-tag">Q5</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container" style="height: 520px;">
-              <canvas id="hotspots-district-ranking-chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Monthly Temporal Trend (Q5) -->
-        <div class="bento-card col-4">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h3>การกระจายตัวรายเดือน (2022 vs 2023)</h3>
-              <div class="card-subtitle">ช่วงเดือนที่พบจุดความร้อนหนาแน่น</div>
-            </div>
-            <span class="card-q-tag">Q5</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container medium">
-              <canvas id="hotspots-monthly-chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Land Use Breakdown -->
-        <div class="bento-card col-4">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h3>จำแนกตามการใช้ประโยชน์ที่ดิน</h3>
-              <div class="card-subtitle">ป่าสงวน, ป่าอนุรักษ์, เกษตรกรรม, ชุมชน</div>
-            </div>
-            <span class="card-q-tag">Q5</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container medium">
-              <canvas id="hotspots-landuse-chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Elevation & Project Area Breakdown -->
-        <div class="bento-card col-4">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h3>ระดับความสูง และพื้นที่โครงการ HRDI</h3>
-              <div class="card-subtitle">สัดส่วนพื้นที่สูง (>500 ม.) และโครงการ</div>
-            </div>
-            <span class="card-q-tag">Q5</span>
-          </div>
-          <div class="card-body" style="display: flex; gap: 0.5rem;">
-            <div style="flex: 1; height: 260px;">
-              <canvas id="hotspots-elevation-chart"></canvas>
-            </div>
-            <div style="flex: 1; height: 260px;">
-              <canvas id="hotspots-project-chart"></canvas>
-            </div>
-          </div>
-        </div>
+        <div id="quality-station-table-container" class="matrix-scroll-wrapper"></div>
       </div>
+
     </section>
 
-    <!-- ======================================================================
-         PAGE 5: ความสัมพันธ์สภาพอากาศกับจุดความร้อน (Q6, Q7, Q8)
-         ====================================================================== -->
-    <section id="page-correlation" class="page-view">
-      <!-- Proximity Method Notice (Dropdown removed) -->
-      <div id="correlation-method-container"></div>
+  </div>
 
-      <div class="bento-grid">
-        <!-- Q6: Rainfall vs Nearby Hotspots Scatter -->
-        <div class="bento-card col-6">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>ปริมาณฝน vs จุดความร้อนรอบสถานี (Q6)</h2>
-              <div class="card-subtitle">
-                เดือนที่สถานีมีฝนน้อย พบจุดความร้อนรอบสถานีมากขึ้นหรือไม่? &bull; 
-                <span id="q6-r-badge" style="font-weight: 700; color: #22d3ee;"></span>
-              </div>
-            </div>
-            <span class="card-q-tag">Q6</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container tall">
-              <canvas id="q6-rainfall-hotspots-scatter"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Q7: Temperature vs Nearby Hotspots Scatter -->
-        <div class="bento-card col-6">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>อุณหภูมิเฉลี่ย vs จุดความร้อนรอบสถานี (Q7)</h2>
-              <div class="card-subtitle">
-                อุณหภูมิสัมพันธ์กับจำนวนจุดความร้อนรอบสถานีหรือไม่? &bull; 
-                <span id="q7-temp-r-badge" style="font-weight: 700; color: #f87171;"></span>
-              </div>
-            </div>
-            <span class="card-q-tag">Q7</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container tall">
-              <canvas id="q7-temp-hotspots-scatter"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Q7: Humidity vs Nearby Hotspots Scatter -->
-        <div class="bento-card col-6">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>ความชื้นสัมพัทธ์ vs จุดความร้อนรอบสถานี (Q7)</h2>
-              <div class="card-subtitle">
-                ความชื้นต่ำสัมพันธ์กับการตรวจพบจุดความร้อนหรือไม่? &bull; 
-                <span id="q7-humidity-r-badge" style="font-weight: 700; color: #2dd4bf;"></span>
-              </div>
-            </div>
-            <span class="card-q-tag">Q7</span>
-          </div>
-          <div class="card-body">
-            <div class="chart-container tall">
-              <canvas id="q7-humidity-hotspots-scatter"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Q8: Lagged Exploratory Analysis (t-1 vs t) -->
-        <div class="bento-card col-6">
-          <div class="card-header">
-            <div class="card-title-group">
-              <h2>การวิเคราะห์หน่วงเวลา: สภาพอากาศเดือนก่อนหน้า (t-1) vs จุดความร้อน (t) (Q8)</h2>
-              <div class="card-subtitle">
-                เฉพาะคู่เดือนที่ติดกันจริงตามปฏิทินของสถานีเดียวกัน (ไม่พยากรณ์อนาคต)
-              </div>
-            </div>
-            <span class="card-q-tag">Q8</span>
-          </div>
-          <div class="card-body">
-            <div id="q8-lag-info" style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.5rem; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);"></div>
-            <div class="chart-container" style="height: 310px;">
-              <canvas id="q8-lagged-scatter"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Concise Footer (Section 13 Compliance) -->
-  <footer style="background: rgba(8, 17, 30, 0.95); backdrop-filter: blur(16px); color: #94a3b8; padding: 1.75rem 2rem; font-size: 0.8rem; border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: auto;">
-    <div style="max-width: 1600px; margin: 0 auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
-      <div style="max-width: 580px;">
-        <div style="font-weight: 700; color: #f8fafc; font-size: 0.92rem; margin-bottom: 0.35rem;">
-          Highland Climate &amp; Hotspot Intelligence (2022–2023)
-        </div>
-        <p style="line-height: 1.55; color: #94a3b8;">
-          แพลตฟอร์มสนับสนุนการวิเคราะห์สภาพภูมิอากาศเชิงประวัติศาสตร์ การเปรียบเทียบเชิงพื้นที่ และสำรวจความสัมพันธ์ระหว่างสภาพอากาศกับจุดความร้อน 
-          ตอบคำถามวิเคราะห์หลัก 9 ข้อ (Q1–Q9) ตามข้อกำหนดใน BRD.md และ HANDOFF.md
-        </p>
-      </div>
-      <div style="max-width: 580px;">
-        <div style="font-weight: 700; color: #f8fafc; font-size: 0.84rem; margin-bottom: 0.35rem;">
-          แหล่งข้อมูลและการแปลความหมาย (Data Sources &amp; Interpretation)
-        </div>
-        <p style="line-height: 1.55; color: #94a3b8;">
-          • แหล่งข้อมูล: HRDI (สภาพอากาศพื้นที่สูง), HII (ฝนระดับจังหวัด) และดาวเทียม VIIRS (ตรวจพบความผิดปกติความร้อน)<br>
-          • ข้อควรระวัง: จุดความร้อนเป็นรายการตรวจพบจากดาวเทียม ไม่ใช่จำนวนเหตุไฟป่าที่พิสูจน์แล้ว<br>
-          • การวัดของสถานีพื้นที่สูงเป็นตัวแทนเฉพาะจุดที่ตั้ง ไม่สามารถใช้แทนค่าเฉลี่ยของทั้งจังหวัดได้
-        </p>
-      </div>
-    </div>
-  </footer>
-
-  <!-- External Libraries: Chart.js & Leaflet -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- External Libraries (Leaflet, MarkerCluster, Chart.js) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- Application Entry Point (ES Module) -->
+  <!-- Main Application Entry Point -->
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

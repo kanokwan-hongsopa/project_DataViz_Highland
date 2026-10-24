@@ -52,7 +52,75 @@ export function calculateMean(records, field) {
 }
 
 /**
+ * Calculate Box Plot / Quartile Distribution statistics (Min, Q1, Median, Q3, Max, Mean, N)
+ * Uses consistent linear interpolation quantile definition (R-7 / PERCENTILE.INC)
+ * @param {Array} records Array of objects or numbers
+ * @param {string} [field] Property name if objects are passed
+ * @returns {{ min: number|null, q1: number|null, median: number|null, q3: number|null, max: number|null, mean: number|null, iqr: number|null, count: number, sufficientForBoxPlot: boolean }}
+ */
+export function calculateQuartiles(records, field = null) {
+  if (!records || records.length === 0) {
+    return {
+      min: null, q1: null, median: null, q3: null, max: null,
+      mean: null, iqr: null, count: 0, sufficientForBoxPlot: false
+    };
+  }
+
+  const values = [];
+  let sum = 0;
+  for (const r of records) {
+    const raw = field ? r[field] : r;
+    if (raw !== null && raw !== undefined && !Number.isNaN(Number(raw))) {
+      const num = Number(raw);
+      values.push(num);
+      sum += num;
+    }
+  }
+
+  const count = values.length;
+  if (count === 0) {
+    return {
+      min: null, q1: null, median: null, q3: null, max: null,
+      mean: null, iqr: null, count: 0, sufficientForBoxPlot: false
+    };
+  }
+
+  values.sort((a, b) => a - b);
+
+  const quantile = (sorted, p) => {
+    if (sorted.length === 1) return sorted[0];
+    const pos = (sorted.length - 1) * p;
+    const base = Math.floor(pos);
+    const rest = pos - base;
+    if (sorted[base + 1] !== undefined) {
+      return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+    }
+    return sorted[base];
+  };
+
+  const min = values[0];
+  const q1 = quantile(values, 0.25);
+  const median = quantile(values, 0.50);
+  const q3 = quantile(values, 0.75);
+  const max = values[count - 1];
+  const mean = sum / count;
+
+  return {
+    min,
+    q1,
+    median,
+    q3,
+    max,
+    mean,
+    iqr: q3 - q1,
+    count,
+    sufficientForBoxPlot: count >= 4
+  };
+}
+
+/**
  * Format a number to fixed decimals or return N/A if null/undefined
+ * Properly formats 0 as "0.0" (never treats 0 as falsy!)
  * @param {number|null} value 
  * @param {number} decimals 
  * @param {string} fallback 
@@ -70,6 +138,7 @@ export function formatNum(value, decimals = 1, fallback = 'N/A') {
 
 /**
  * Format an integer count with thousands separator
+ * Properly formats 0 as "0" (never treats 0 as falsy!)
  * @param {number|null} value 
  * @param {string} fallback 
  * @returns {string}
@@ -82,6 +151,26 @@ export function formatInt(value, fallback = 'N/A') {
 }
 
 /**
+ * Format a signed difference value, ensuring 0 is rendered as "0.0" (or "0") rather than "N/A"
+ * @param {number|null} diff 
+ * @param {number} decimals 
+ * @param {string} unit 
+ * @param {string} fallback 
+ * @returns {string}
+ */
+export function formatSignedDelta(diff, decimals = 1, unit = '', fallback = 'N/A') {
+  if (diff === null || diff === undefined || Number.isNaN(Number(diff))) {
+    return fallback;
+  }
+  const num = Number(diff);
+  const sign = num > 0 ? '+' : '';
+  const formatted = decimals === 0
+    ? Math.round(num).toLocaleString('th-TH')
+    : num.toLocaleString('th-TH', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return `${sign}${formatted}${unit ? ' ' + unit : ''}`;
+}
+
+/**
  * Calculate fair Year-over-Year (YoY) comparison for HRDI station climate
  * Compares ONLY identical station_id + month pairs present in BOTH 2022 and 2023
  * 
@@ -91,7 +180,6 @@ export function formatInt(value, fallback = 'N/A') {
  * @returns {Object} { val2022, val2023, diff, pctChange, nPairs, note }
  */
 export function calculateFairHrdiYoY(records2022, records2023, metric) {
-  // Map records by composite key: `${station_id}_${month}`
   const map2022 = new Map();
   for (const r of records2022) {
     const val = r[metric];
@@ -110,7 +198,6 @@ export function calculateFairHrdiYoY(records2022, records2023, metric) {
     }
   }
 
-  // Find intersection of keys present in both years
   let sum2022 = 0;
   let sum2023 = 0;
   let nPairs = 0;
@@ -157,14 +244,14 @@ export function calculateFairHrdiYoY(records2022, records2023, metric) {
 export function calculateFairHiiYoY(hii2022, hii2023) {
   const map2022 = new Map();
   for (const r of hii2022) {
-    if (r.hii_avg_rain !== null && r.hii_avg_rain !== undefined) {
+    if (r.hii_avg_rain !== null && r.hii_avg_rain !== undefined && !Number.isNaN(Number(r.hii_avg_rain))) {
       map2022.set(`${r.province}_${r.month}`, Number(r.hii_avg_rain));
     }
   }
 
   const map2023 = new Map();
   for (const r of hii2023) {
-    if (r.hii_avg_rain !== null && r.hii_avg_rain !== undefined) {
+    if (r.hii_avg_rain !== null && r.hii_avg_rain !== undefined && !Number.isNaN(Number(r.hii_avg_rain))) {
       map2023.set(`${r.province}_${r.month}`, Number(r.hii_avg_rain));
     }
   }
@@ -195,16 +282,19 @@ export function calculateFairHiiYoY(hii2022, hii2023) {
 
 /**
  * Calculate YoY for satellite hotspot detection counts
+ * Never divides by zero when count2022 === 0
  * @param {number} count2022 
  * @param {number} count2023 
  * @returns {Object}
  */
 export function calculateHotspotYoY(count2022, count2023) {
-  const diff = count2023 - count2022;
-  const pctChange = count2022 > 0 ? (diff / count2022) * 100 : null;
+  const c22 = Number(count2022) || 0;
+  const c23 = Number(count2023) || 0;
+  const diff = c23 - c22;
+  const pctChange = c22 > 0 ? (diff / c22) * 100 : null;
   return {
-    count2022,
-    count2023,
+    count2022: c22,
+    count2023: c23,
     diff,
     pctChange
   };
@@ -280,7 +370,6 @@ export function calculatePearsonR(pairs, xField, yField) {
   }
 
   const r = numer / (Math.sqrt(denomX) * Math.sqrt(denomY));
-  // Bound to [-1, 1] against floating point inaccuracies
   const clampedR = Math.max(-1, Math.min(1, r));
 
   const absR = Math.abs(clampedR);
@@ -314,7 +403,6 @@ export function calculatePearsonR(pairs, xField, yField) {
  * @returns {{ pairs: Array, rResult: Object }}
  */
 export function calculateLaggedPairs(records, climateMetric, hotspotField) {
-  // Group records by station_id and sort chronologically
   const stationGroups = new Map();
   for (const r of records) {
     if (!stationGroups.has(r.station_id)) {
@@ -326,14 +414,12 @@ export function calculateLaggedPairs(records, climateMetric, hotspotField) {
   const lagPairs = [];
 
   for (const [stationId, group] of stationGroups.entries()) {
-    // Sort ascending by year and month
     group.sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
 
     for (let i = 0; i < group.length - 1; i++) {
       const prev = group[i];
       const next = group[i + 1];
 
-      // Check strictly consecutive calendar adjacency
       const isConsecutive =
         (next.year === prev.year && next.month === prev.month + 1) ||
         (next.year === prev.year + 1 && prev.month === 12 && next.month === 1);

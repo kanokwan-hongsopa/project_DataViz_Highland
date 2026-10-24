@@ -7,33 +7,41 @@ export const DEFAULT_MONTHS_COMPARE = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 export const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const initialState = {
-  activeTab: 'overview',        // 'overview' | 'climate' | 'rainfall' | 'hotspots' | 'correlation'
-  yearMode: 'compare',         // '2022' | '2023' | 'compare'
+  activeTab: 'overview',        // 'overview' (Q1) | 'climate' (Q2) | 'hotspots' (Q3) | 'correlation' (Q4) | 'quality' (Q5)
+  yearMode: 'compare',          // '2022' | '2023' | 'compare'
   selectedMonths: [...DEFAULT_MONTHS_COMPARE], // Default Jan–Sep for fair HRDI comparison
-  province: null,               // Selected province or null (all 9 provinces)
+  province: null,               // Selected province or null (all 9 study provinces)
   district: null,               // Selected district or null
   tambon: null,                 // Selected subdistrict or null
   stationId: null,              // Selected station ID or null
+  weatherSource: 'all',         // 'all' | 'OpenWeatherMap' | 'HRDI Weather Station'
   metric: 'temp',               // 'temp' | 'rainfall' | 'humidity' | 'wind_speed' | 'temp_min' | 'temp_max'
   overviewMetricTab: 'temp',    // 'temp' | 'humidity' | 'rainfall' | 'hotspots'
+  rainfallSource: 'hrdi',       // 'hrdi' (Station rainfall) | 'hii' (Provincial rainfall)
+  hotspotMetric: 'detections',  // 'detections' | 'frp'
   hotspotElevation: 'all',      // 'all' | 'high' (>500m) | 'low' (<=500m)
-  hotspotProject: 'all',        // 'all' | 'in_project' | 'outside' | specific project
+  hotspotProject: 'all',        // 'all' | 'in_project' | 'outside' | specific project name
   landuse: 'all',               // 'all' | specific land use category
   proximityMethod: '10km',      // Fixed strictly to 10 km radius around HRDI station
   mapSwipePercent: 50,          // 0 to 100% split for before/after comparison
-  swipeMetric: 'temp',          // 'temp' | 'rainfall' | 'hotspots'
+  swipeMetric: 'temp',          // 'temp' | 'humidity' | 'rainfall' | 'hotspots'
+  showMapStations: false,       // Toggle weather station markers on Overview Choropleth map
+  advancedFiltersOpen: false,   // Toggle collapsible advanced filters drawer
   rainfallComparable: false,    // Strict config gate default false (Q4 safeguard)
   searchQuery: ''               // Optional search query
 };
 
-let currentState = { ...initialState };
+let currentState = { ...initialState, selectedMonths: [...initialState.selectedMonths] };
 const listeners = new Set();
 
 /**
  * Get a read-only snapshot of the current state
  */
 export function getState() {
-  return { ...currentState };
+  return {
+    ...currentState,
+    selectedMonths: [...currentState.selectedMonths]
+  };
 }
 
 /**
@@ -48,45 +56,68 @@ export function subscribe(listener) {
 
 /**
  * Update state with partial updates and notify listeners
- * Automatically manages cascading filter dependencies
+ * Automatically manages cascading filter dependencies without clobbering explicit child updates
  * @param {Object} updates Partial state updates
  */
 export function setState(updates) {
-  const oldState = { ...currentState };
+  const oldState = getState();
   const nextState = { ...currentState, ...updates };
 
   // Enforce fixed 10 km proximity definition
   nextState.proximityMethod = '10km';
 
-  // Cascade resets when geographic boundary changes
+  // Cascade resets when geographic boundary changes, preserving explicit child updates passed in same call
   if (updates.province !== undefined && updates.province !== oldState.province) {
-    nextState.district = null;
-    nextState.tambon = null;
-    nextState.stationId = null;
+    if (updates.district === undefined) nextState.district = null;
+    if (updates.tambon === undefined) nextState.tambon = null;
+    if (updates.stationId === undefined) nextState.stationId = null;
   }
   if (updates.district !== undefined && updates.district !== oldState.district) {
-    nextState.tambon = null;
+    if (updates.tambon === undefined) nextState.tambon = null;
+    if (updates.stationId === undefined) nextState.stationId = null;
+  }
+  if (updates.tambon !== undefined && updates.tambon !== oldState.tambon) {
+    if (updates.stationId === undefined) nextState.stationId = null;
   }
 
   // When switching year mode, adjust default months if appropriate
   if (updates.yearMode && updates.yearMode !== oldState.yearMode) {
     if (updates.yearMode === 'compare') {
       if (!updates.selectedMonths) {
-        nextState.selectedMonths = [...DEFAULT_MONTHS_COMPARE];
+        const hadAllMonths = oldState.selectedMonths.length === ALL_MONTHS.length;
+        if (hadAllMonths) {
+          nextState.selectedMonths = [...DEFAULT_MONTHS_COMPARE];
+        }
       }
-    } else if (!updates.selectedMonths && oldState.selectedMonths.length === DEFAULT_MONTHS_COMPARE.length) {
-      nextState.selectedMonths = [...ALL_MONTHS];
+    } else if (!updates.selectedMonths) {
+      const hadDefaultCompare =
+        oldState.selectedMonths.length === DEFAULT_MONTHS_COMPARE.length &&
+        oldState.selectedMonths.every((m, idx) => m === DEFAULT_MONTHS_COMPARE[idx]);
+      if (hadDefaultCompare) {
+        nextState.selectedMonths = [...ALL_MONTHS];
+      }
     }
   }
 
-  const changedKeys = Object.keys(updates).filter(k => oldState[k] !== nextState[k]);
+  // Ensure selectedMonths is sorted unique numbers
+  if (Array.isArray(nextState.selectedMonths)) {
+    nextState.selectedMonths = Array.from(new Set(nextState.selectedMonths.map(Number))).sort((a, b) => a - b);
+  }
+
+  const changedKeys = Object.keys(nextState).filter(k => {
+    if (Array.isArray(oldState[k]) && Array.isArray(nextState[k])) {
+      return oldState[k].length !== nextState[k].length || oldState[k].some((v, i) => v !== nextState[k][i]);
+    }
+    return oldState[k] !== nextState[k];
+  });
+
   if (changedKeys.length === 0) return;
 
   currentState = nextState;
 
   for (const listener of listeners) {
     try {
-      listener(currentState, oldState, changedKeys);
+      listener(getState(), oldState, changedKeys);
     } catch (err) {
       console.error('Error in state listener:', err);
     }
@@ -94,18 +125,25 @@ export function setState(updates) {
 }
 
 /**
- * Reset all geographic, category, and temporal filters to defaults (9-province overview)
+ * Reset all geographic, category, source, and temporal filters to defaults (9-province overview)
  */
 export function resetFilters() {
   setState({
+    yearMode: 'compare',
+    selectedMonths: [...DEFAULT_MONTHS_COMPARE],
     province: null,
     district: null,
     tambon: null,
     stationId: null,
+    weatherSource: 'all',
+    metric: 'temp',
+    overviewMetricTab: 'temp',
+    rainfallSource: 'hrdi',
+    hotspotMetric: 'detections',
     hotspotElevation: 'all',
     hotspotProject: 'all',
     landuse: 'all',
-    selectedMonths: currentState.yearMode === 'compare' ? [...DEFAULT_MONTHS_COMPARE] : [...ALL_MONTHS],
+    swipeMetric: 'temp',
     searchQuery: ''
   });
 }
