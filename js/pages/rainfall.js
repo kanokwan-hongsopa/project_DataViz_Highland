@@ -1,6 +1,6 @@
 /**
- * rainfall.js — Page 5 (Q5): คุณภาพข้อมูล ความครบถ้วน วิธีวัด ข้อจำกัด และแหล่งอ้างอิง
- * Highland Climate & Hotspot Intelligence Platform (2022–2023)
+ * rainfall.js — Page 5 (Q5): ข้อมูลและที่มา (Data Sources, Completeness, Stations by Province & Audit Table)
+ * Highland Climate & Hotspot Dashboard (2022–2023)
  */
 
 import { getState, setState } from '../state.js';
@@ -19,7 +19,7 @@ import {
 } from '../charts.js';
 
 /**
- * Render Tab Q5: Data Quality, Completeness, Methodology & Provenance
+ * Render Tab Q5: Data Quality, Completeness, Stations by Province, Methodology & Provenance
  */
 export function renderRainfallPage() {
   const state = getState();
@@ -37,13 +37,16 @@ export function renderRainfallPage() {
   // 2. Render Province Record Completeness Bar Chart (2022 vs 2023)
   renderCompletenessByProvinceChart(state);
 
-  // 3. Render Weather Source Distribution Chart (OpenWeatherMap vs HRDI Weather Station)
+  // 3. Render Stations by Province Bar Chart (Interactive click-to-filter province)
+  renderStationsByProvinceChart(state);
+
+  // 4. Render Weather Source Distribution Chart (OpenWeatherMap vs HRDI Weather Station)
   renderWeatherSourceDistributionChart(state);
 
-  // 4. Render Interactive Station Metadata & Completeness Audit Table
+  // 5. Render Searchable & Expandable Station Metadata & Completeness Audit Table
   renderStationCompletenessTable(state);
 
-  // 5. Render Dynamic Key Insights (Q5)
+  // 6. Render Dynamic Key Insights (Q5)
   const insightEl = document.getElementById('insight-q5');
   if (insightEl) {
     const matchedStations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
@@ -133,6 +136,56 @@ function renderCompletenessByProvinceChart(state) {
 }
 
 /**
+ * Render Number of Stations by Province Bar Chart (Section 3 of Q5)
+ */
+function renderStationsByProvinceChart(state) {
+  const canvas = document.getElementById('quality-stations-by-province-chart');
+  if (!canvas) return;
+
+  const db = getDb();
+  const provStationStats = STUDY_PROVINCES.map(prov => {
+    const list = db.stations.filter(s => {
+      if (s.province !== prov) return false;
+      if (state.weatherSource && state.weatherSource !== 'all' && s.source_type !== state.weatherSource) return false;
+      return true;
+    });
+    return {
+      province: prov,
+      count: list.length
+    };
+  }).sort((a, b) => b.count - a.count);
+
+  renderBarChart('quality-stations-by-province-chart', {
+    labels: provStationStats.map(p => p.province),
+    datasets: [
+      {
+        label: 'จำนวนสถานีตรวจวัด (แห่ง)',
+        data: provStationStats.map(p => p.count),
+        backgroundColor: provStationStats.map(p => state.province === p.province ? '#D97706' : '#0B96B5'),
+        borderRadius: 6
+      }
+    ]
+  }, {
+    indexAxis: 'y',
+    showValueLabels: true,
+    onClick: (evt, elements) => {
+      if (elements && elements.length > 0) {
+        const idx = elements[0].index;
+        const clickedProv = provStationStats[idx]?.province;
+        if (clickedProv) {
+          setState({ province: state.province === clickedProv ? null : clickedProv });
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'จำนวนสถานีตรวจวัด (แห่ง) — คลิกจังหวัดเพื่อกรอง' }
+      }
+    }
+  });
+}
+
+/**
  * Render Weather Source Breakdown Chart (OpenWeatherMap vs HRDI Weather Station)
  */
 function renderWeatherSourceDistributionChart(state) {
@@ -188,16 +241,46 @@ function renderWeatherSourceDistributionChart(state) {
 }
 
 /**
- * Render Interactive Station Metadata & Completeness Table
+ * Render Interactive, Searchable & Expandable Station Metadata & Completeness Table
  */
 function renderStationCompletenessTable(state) {
   const container = document.getElementById('quality-station-table-container');
   if (!container) return;
 
   const db = getDb();
-  const stations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
+  let stations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
+
+  const query = (state.searchQuery || '').trim().toLowerCase();
+  if (query) {
+    stations = stations.filter(s =>
+      (s.station_name || '').toLowerCase().includes(query) ||
+      (s.station_id || '').toLowerCase().includes(query) ||
+      (s.province || '').toLowerCase().includes(query) ||
+      (s.district || '').toLowerCase().includes(query) ||
+      (s.tambon || '').toLowerCase().includes(query) ||
+      (s.source_type || '').toLowerCase().includes(query)
+    );
+  }
+
+  const isExpanded = Boolean(window._stationTableExpanded || query || state.province);
+  const displayStations = isExpanded ? stations : stations.slice(0, 8);
+
+  const btnToggle = document.getElementById('btn-toggle-station-table');
+  if (btnToggle) {
+    if (stations.length <= 8 || query || state.province) {
+      btnToggle.style.display = 'none';
+    } else {
+      btnToggle.style.display = 'inline-flex';
+      btnToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      btnToggle.innerHTML = `<span>${isExpanded ? 'ย่อตารางสถานี (แสดง 8 แห่งแรก)' : `แสดงครบทุกสถานี (${stations.length} แห่ง)`}</span>`;
+    }
+  }
 
   let html = `
+    <div class="matrix-meta-bar">
+      <span>แสดง <strong>${displayStations.length}</strong> จากทั้งหมด <strong>${stations.length}</strong> สถานีที่ตรงตามเงื่อนไข</span>
+      <span>คลิกแถวของสถานีเพื่อกรองข้อมูลเฉพาะสถานีนั้น</span>
+    </div>
     <table class="matrix-table">
       <thead>
         <tr>
@@ -214,11 +297,11 @@ function renderStationCompletenessTable(state) {
       <tbody>
   `;
 
-  if (stations.length === 0) {
-    html += `<tr><td colspan="8" style="text-align:center; padding: 1.5rem; color: #43627A;">ไม่พบสถานีตามตัวกรองที่เลือก</td></tr>`;
+  if (displayStations.length === 0) {
+    html += `<tr><td colspan="8" style="text-align:center; padding: 1.5rem; color: #43627A;">ไม่พบสถานีตามคำค้นหาหรือตัวกรองที่เลือก</td></tr>`;
   }
 
-  for (const s of stations) {
+  for (const s of displayStations) {
     const r22 = db.hrdiStationMonth.filter(r => r.station_id === s.station_id && r.year === 2022).length;
     const r23 = db.hrdiStationMonth.filter(r => r.station_id === s.station_id && r.year === 2023).length;
     const total = r22 + r23;
@@ -236,7 +319,7 @@ function renderStationCompletenessTable(state) {
         </td>
         <td style="font-weight:600;">${escapeHtml(s.province)}</td>
         <td>${escapeHtml(s.district || '-')} / ${escapeHtml(s.tambon || '-')}</td>
-        <td style="font-family:monospace; font-size:0.75rem;">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</td>
+        <td style="font-family:monospace; font-size:0.78rem;">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</td>
         <td><strong>${r22}</strong> / 12 เดือน</td>
         <td><strong>${r23}</strong> / 9 เดือน</td>
         <td><strong style="color:#0B96B5;">${total}</strong> ระเบียน</td>

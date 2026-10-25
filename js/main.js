@@ -501,6 +501,33 @@ function setupOverviewControls() {
       }
     });
   }
+
+  // Toggle Collapsible Station x Month Matrix Table on Tab Q2
+  const btnToggleClimateMatrix = document.getElementById('btn-toggle-climate-matrix');
+  const climateMatrixBody = document.getElementById('climate-matrix-collapsible-body');
+  if (btnToggleClimateMatrix && climateMatrixBody) {
+    btnToggleClimateMatrix.addEventListener('click', () => {
+      const isOpen = climateMatrixBody.classList.toggle('open');
+      btnToggleClimateMatrix.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      btnToggleClimateMatrix.innerHTML = `<span>${isOpen ? 'พับเก็บตารางข้อมูลรายสถานี' : 'เปิดดูตารางข้อมูลรายสถานีเต็ม'}</span>`;
+    });
+  }
+
+  // Search & Expand Controls for Station Completeness Table on Tab Q5
+  const stationSearchInput = document.getElementById('station-table-search');
+  if (stationSearchInput) {
+    stationSearchInput.addEventListener('input', (e) => {
+      setState({ searchQuery: e.target.value || '' });
+    });
+  }
+
+  const btnToggleStationTable = document.getElementById('btn-toggle-station-table');
+  if (btnToggleStationTable) {
+    btnToggleStationTable.addEventListener('click', () => {
+      window._stationTableExpanded = !window._stationTableExpanded;
+      renderRainfallPage();
+    });
+  }
 }
 
 /**
@@ -688,6 +715,11 @@ function updateFilterControls(state) {
   const luSelect = document.getElementById('filter-hotspot-landuse');
   if (luSelect && luSelect.value !== state.landuse) {
     luSelect.value = state.landuse;
+  }
+
+  const stationSearchInput = document.getElementById('station-table-search');
+  if (stationSearchInput && stationSearchInput.value !== (state.searchQuery || '')) {
+    stationSearchInput.value = state.searchQuery || '';
   }
 }
 

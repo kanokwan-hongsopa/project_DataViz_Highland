@@ -161,6 +161,18 @@ function renderRainfallVsHotspotsScatter(state, records, proximityField, proximi
       : rResult.pStrength;
   }
 
+  const q6SummaryEl = document.getElementById('q6-plain-summary');
+  if (q6SummaryEl) {
+    if (rResult.r === null || rResult.n < 3) {
+      q6SummaryEl.textContent = `ไม่สามารถคำนวณความสัมพันธ์ตามตัวกรองนี้ได้เนื่องจากมีข้อมูลคู่กันเพียง ${rResult.n} เดือน (ต้องมีอย่างน้อย 3 คู่เดือน)`;
+    } else {
+      const dirText = rResult.r < -0.1 ? 'สวนทางกัน (เมื่อฝนน้อยมักพบจุดความร้อนมากขึ้น)'
+        : rResult.r > 0.1 ? 'ไปในทิศทางเดียวกัน'
+        : 'ใกล้ศูนย์ (แทบไม่พบแนวโน้มเชิงเส้นตรง)';
+      q6SummaryEl.textContent = `สรุปจากข้อมูลจริง ${rResult.n} คู่สถานี–เดือน: ปริมาณน้ำฝนและจุดความร้อนรอบสถานีมีความสัมพันธ์แบบ${dirText} (r = ${rResult.r.toFixed(2)}, ความสัมพันธ์ทางสถิติไม่ใช่เหตุและผล)`;
+    }
+  }
+
   renderScatterChart('q6-rainfall-hotspots-scatter', {
     datasets: [{
       label: 'คู่ข้อมูลสถานี-เดือน (คลิกจุดเพื่อเลือกสถานี)',
@@ -229,6 +241,18 @@ function renderTempVsHotspotsScatter(state, records, proximityField, proximityLa
     badgeEl.textContent = rResult.r !== null
       ? `Pearson r = ${rResult.r.toFixed(3)} (${rResult.pStrength}, N = ${rResult.n})`
       : rResult.pStrength;
+  }
+
+  const q7aSummaryEl = document.getElementById('q7-temp-plain-summary');
+  if (q7aSummaryEl) {
+    if (rResult.r === null || rResult.n < 3) {
+      q7aSummaryEl.textContent = `ไม่สามารถคำนวณความสัมพันธ์ตามตัวกรองนี้ได้เนื่องจากมีข้อมูลคู่กันเพียง ${rResult.n} เดือน (ต้องมีอย่างน้อย 3 คู่เดือน)`;
+    } else {
+      const dirText = rResult.r > 0.1 ? 'ไปในทิศทางเดียวกัน (เดือนที่อุณหภูมิสูงขึ้นมักพบจุดความร้อนรอบสถานีมากขึ้น)'
+        : rResult.r < -0.1 ? 'สวนทางกัน'
+        : 'ใกล้ศูนย์ (แทบไม่พบแนวโน้มเชิงเส้นตรง)';
+      q7aSummaryEl.textContent = `สรุปจากข้อมูลจริง ${rResult.n} คู่สถานี–เดือน: อุณหภูมิเฉลี่ยและจุดความร้อนมีความสัมพันธ์แบบ${dirText} (r = ${rResult.r.toFixed(2)}, ความสัมพันธ์ทางสถิติไม่ใช่เหตุและผล)`;
+    }
   }
 
   renderScatterChart('q7-temp-hotspots-scatter', {
@@ -301,6 +325,18 @@ function renderHumidityVsHotspotsScatter(state, records, proximityField, proximi
       : rResult.pStrength;
   }
 
+  const q7bSummaryEl = document.getElementById('q7-humidity-plain-summary');
+  if (q7bSummaryEl) {
+    if (rResult.r === null || rResult.n < 3) {
+      q7bSummaryEl.textContent = `ไม่สามารถคำนวณความสัมพันธ์ตามตัวกรองนี้ได้เนื่องจากมีข้อมูลคู่กันเพียง ${rResult.n} เดือน (ต้องมีอย่างน้อย 3 คู่เดือน)`;
+    } else {
+      const dirText = rResult.r < -0.1 ? 'สวนทางกันชัดเจน (ช่วงที่อากาศแห้งหรือความชื้นต่ำมักพบจุดความร้อนสูงขึ้น)'
+        : rResult.r > 0.1 ? 'ไปในทิศทางเดียวกัน'
+        : 'ใกล้ศูนย์ (แทบไม่พบแนวโน้มเชิงเส้นตรง)';
+      q7bSummaryEl.textContent = `สรุปจากข้อมูลจริง ${rResult.n} คู่สถานี–เดือน: ความชื้นสัมพัทธ์และจุดความร้อนมีความสัมพันธ์แบบ${dirText} (r = ${rResult.r.toFixed(2)}, ความสัมพันธ์ทางสถิติไม่ใช่เหตุและผล)`;
+    }
+  }
+
   renderScatterChart('q7-humidity-hotspots-scatter', {
     datasets: [{
       label: 'คู่ข้อมูลสถานี-เดือน (คลิกจุดเพื่อเลือกสถานี)',
@@ -354,6 +390,15 @@ function renderLaggedAnalysis(state, records, proximityField, proximityLabel) {
       <span>ฝนเดือนก่อนหน้า (t−1) vs จุดความร้อนเดือนถัดไป (t): <strong style="color: #0B96B5;">Pearson r = ${rainLag.rResult.r !== null ? rainLag.rResult.r.toFixed(3) : 'N/A'}</strong> (N = ${rainLag.rResult.n} คู่เดือนต่อเนื่องจริง)</span>
       <span style="margin-left: 1rem;">อุณหภูมิเดือนก่อนหน้า (t−1) vs จุดความร้อนเดือนถัดไป (t): <strong style="color: #E11D48;">Pearson r = ${tempLag.rResult.r !== null ? tempLag.rResult.r.toFixed(3) : 'N/A'}</strong> (N = ${tempLag.rResult.n} คู่เดือนต่อเนื่องจริง)</span>
     `;
+  }
+
+  const q8SummaryEl = document.getElementById('q8-plain-summary');
+  if (q8SummaryEl) {
+    if (rainLag.rResult.r === null || rainLag.rResult.n < 3) {
+      q8SummaryEl.textContent = `ไม่สามารถวิเคราะห์ความสัมพันธ์แบบเหลื่อมเวลา 1 เดือนตามตัวกรองนี้ได้ เนื่องจากต้องเลือกช่วงเดือนที่ต่อเนื่องกันอย่างน้อย 3 คู่เดือน (พบ ${rainLag.rResult.n} คู่เดือน)`;
+    } else {
+      q8SummaryEl.textContent = `สรุปจากคู่เดือนต่อเนื่องจริง ${rainLag.rResult.n} คู่: ปริมาณฝนในเดือนก่อนหน้า (t−1) มีค่าสหสัมพันธ์ r = ${rainLag.rResult.r.toFixed(2)} กับจุดความร้อนในเดือนถัดไป (t) ของสถานีเดียวกัน`;
+    }
   }
 
   const lagScatterData = rainLag.pairs.map(p => ({
@@ -587,4 +632,10 @@ function renderCrossRainfallSection(state) {
       }
     }
   });
+
+  const q3q4SummaryEl = document.getElementById('q3q4-plain-summary');
+  if (q3q4SummaryEl) {
+    const scopeTxt = state.province ? `จ.${state.province}` : 'พื้นที่ศึกษา 9 จังหวัด';
+    q3q4SummaryEl.textContent = `สรุปการเปรียบเทียบใน${scopeTxt}: ค่าเฉลี่ยน้ำฝนรายสถานีพื้นที่สูง (HRDI) อยู่ที่ ${formatNum(hrdiStats.mean, 1)} มม./สถานี-เดือน และค่าเฉลี่ยน้ำฝนระดับจังหวัด (HII) อยู่ที่ ${formatNum(hiiStats.mean, 1)} มม./จังหวัด-เดือน โดยทั้งสองแหล่งมีแนวโน้มฤดูกาลสอดคล้องกันแต่ไม่นำมาลบกันโดยตรงเนื่องจากระดับพื้นที่ต่างกัน`;
+  }
 }
