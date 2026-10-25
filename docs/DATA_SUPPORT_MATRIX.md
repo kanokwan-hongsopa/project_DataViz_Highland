@@ -6,12 +6,12 @@
 
 ## 1. ตารางสรุปชุดข้อมูลหลักใน `data/`
 
-| ชุดข้อมูล (ไฟล์ JSON) | จำนวนระเบียนจริง | ระดับความละเอียดเชิงพื้นที่ (Spatial Granularity) | ระดับเวลา (Temporal Granularity) | ช่วงข้อมูลที่มีจริง |
+| ชุดข้อมูล (ไฟล์ JSON) | จำนวนรายการข้อมูลจริง | ระดับความละเอียดเชิงพื้นที่ (Spatial Granularity) | ระดับเวลา (Temporal Granularity) | ช่วงข้อมูลที่มีจริง |
 |---|---:|---|---|---|
 | [`data/stations.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/stations.json) | `50` สถานี | รายสถานี (`station_id`, พิกัด `lat`/`lon`, `province`, `district`, `subdistrict`) | คงที่ (Metadata) | 47 `OpenWeatherMap` + 3 `HRDI Weather Station` |
-| [`data/hrdi_station_month.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/hrdi_station_month.json) | `977` ระเบียน | รายสถานี (`station_id`, `province`, `district`, `subdistrict`, `source_type`) | รายเดือน (`year`, `month`) | ปี 2022: ม.ค.–ธ.ค. (`545` ระเบียน) / ปี 2023: ม.ค.–ก.ย. (`432` ระเบียน) |
-| [`data/station_month_dashboard.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/station_month_dashboard.json) | `977` ระเบียน | รายสถานี พร้อมจำนวนจุดความร้อนรอบสถานีในรัศมี 10 กม. (`hotspot_10km_count`) | รายเดือน (`year`, `month`) | ปี 2022: ม.ค.–ธ.ค. (`545` ระเบียน) / ปี 2023: ม.ค.–ก.ย. (`432` ระเบียน) |
-| [`data/hii_province_month.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/hii_province_month.json) | `216` ระเบียน | รายจังหวัด (`province` 9 จังหวัดศึกษา) | รายเดือน (`year`, `month`) | ปี 2022–2023 ครบทุกเดือน (9 จังหวัด × 24 เดือน) |
+| [`data/hrdi_station_month.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/hrdi_station_month.json) | `977` รายการข้อมูล | รายสถานี (`station_id`, `province`, `district`, `subdistrict`, `source_type`) | รายเดือน (`year`, `month`) | ปี 2022: ม.ค.–ธ.ค. (`545` รายการข้อมูล) / ปี 2023: ม.ค.–ก.ย. (`432` รายการข้อมูล) |
+| [`data/station_month_dashboard.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/station_month_dashboard.json) | `977` รายการข้อมูล | รายสถานี พร้อมจำนวนจุดความร้อนรอบสถานีในรัศมี 10 กม. (`hotspot_10km_count`) | รายเดือน (`year`, `month`) | ปี 2022: ม.ค.–ธ.ค. (`545` รายการข้อมูล) / ปี 2023: ม.ค.–ก.ย. (`432` รายการข้อมูล) |
+| [`data/hii_province_month.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/hii_province_month.json) | `216` รายการข้อมูล | รายจังหวัด (`province` 9 จังหวัดศึกษา) | รายเดือน (`year`, `month`) | ปี 2022–2023 ครบทุกเดือน (9 จังหวัด × 24 เดือน) |
 | [`data/hotspots/YYYY/MM.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/hotspot_manifest.json) | `106,036` รายการ | รายจุดพิกัดดาวเทียม (`lat`, `lon`, `province`, `district`, `tambon`, `elevation`, `landuse`, `in_project_area`) | รายวัน/เวลา (`date`, `time`, `year`, `month`) | ปี 2022 (`19,029` รายการ) + ปี 2023 (`87,007` รายการ) รวม 24 พาร์ทิชัน |
 | [`data/hotspot_multidim_index.json`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/hotspot_multidim_index.json) | `14,113` กลุ่มคอมบิเนชัน (ผลรวม `106,036` รายการ) | ดัชนีหลายมิติครบทุกฟิลด์ (`year`, `month`, `province`, `district`, `tambon`, `elevation`, `project`, `landuse`) | รายเดือน (`year`, `month`) | สร้างจากพาร์ทิชันจริงทั้ง 24 เดือนเพื่อการกรองร่วมแบบ `AND` ทันที |
 | [`data/thailand_provinces.geojson`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/data/thailand_provinces.geojson) | `77` จังหวัด | ขอบเขตจังหวัดทั่วประเทศ (เน้น 9 จังหวัดพื้นที่ศึกษา + 68 จังหวัดบริบท) | คงที่ (GeoJSON Polygon) | พื้นที่ศึกษา 9 จังหวัด: เชียงใหม่, เชียงราย, แม่ฮ่องสอน, ลำพูน, ลำปาง, พะเยา, แพร่, น่าน, ตาก |
@@ -28,7 +28,7 @@
 | **อำเภอ (`district`)** | รองรับโดยตรง (`district`) | **ไม่รองรับระดับอำเภอ** (คงค่าที่ระดับจังหวัดของอำเภอนั้น) | รองรับโดยตรง (`district`) | แสดงป้ายแจ้งเตือนชัดเจนว่าข้อมูลฝน HII แสดงที่ระดับจังหวัด |
 | **ตำบล (`tambon`)** | รองรับโดยตรง (`subdistrict`) | **ไม่รองรับระดับตำบล** (คงค่าที่ระดับจังหวัด) | รองรับโดยตรง (`tambon`) | แสดงป้ายแจ้งเตือนระดับความละเอียดของข้อมูล |
 | **สถานีตรวจวัด (`stationId`)** | รองรับโดยตรง (`station_id`) | **ไม่รองรับระดับสถานี** (คงค่าที่ระดับจังหวัดของสถานีนั้น) | ในแท็บ Q4 ใช้จุดความร้อนในรัศมี 10 กม. รอบสถานี (`hotspot_10km_count`) / ในแท็บ Q1 & Q3 ใช้ระดับจังหวัด-อำเภอที่เกี่ยวข้องพร้อมแจ้งขอบเขต | แสดงป้ายแจ้งเตือนขอบเขตการกรอง (`#filter-scope-notice`) |
-| **แหล่งข้อมูลสถานี (`weatherSource` / `source_type`)** | รองรับโดยตรง (`OpenWeatherMap` 47 สถานี / `HRDI Weather Station` 3 สถานี) | **ไม่เกี่ยวข้อง** (เนื่องจากเป็นข้อมูล HII ระดับจังหวัด) | ในแท็บ Q4 กรองคู่สถานี–เดือนตาม `source_type` ของสถานี | อัปเดตป้ายจำนวนสถานีและระเบียน (`#weather-source-scope-badge`) ทันที |
+| **แหล่งข้อมูลสถานี (`weatherSource` / `source_type`)** | รองรับโดยตรง (`OpenWeatherMap` 47 สถานี / `HRDI Weather Station` 3 สถานี) | **ไม่เกี่ยวข้อง** (เนื่องจากเป็นข้อมูล HII ระดับจังหวัด) | ในแท็บ Q4 กรองคู่สถานี–เดือนตาม `source_type` ของสถานี | อัปเดตป้ายจำนวนสถานีและรายการข้อมูล (`#weather-source-scope-badge`) ทันที |
 | **ระดับความสูงจุดความร้อน (`hotspotElevation`)** | ไม่ใช้กับภูมิอากาศสถานี | ไม่ใช้กับน้ำฝน HII | รองรับโดยตรงแบบ `AND` (`>500m` / `<=500m`) | กรอง KPI จุดความร้อน, แผนที่จุดความร้อน และกราฟจุดความร้อนทั้งหมดพร้อมกัน |
 | **การใช้ประโยชน์ที่ดิน (`hotspotLanduse`)** | ไม่ใช้กับภูมิอากาศสถานี | ไม่ใช้กับน้ำฝน HII | รองรับโดยตรงแบบ `AND` (8 หมวดการใช้ที่ดินจริง) | กรอง KPI จุดความร้อน, แผนที่จุดความร้อน และกราฟจุดความร้อนทั้งหมดพร้อมกัน |
 | **พื้นที่โครงการ (`hotspotProject`)** | ไม่ใช้กับภูมิอากาศสถานี | ไม่ใช้กับน้ำฝน HII | รองรับโดยตรงแบบ `AND` (`in_project` / `outside`) | กรอง KPI จุดความร้อน, แผนที่จุดความร้อน และกราฟจุดความร้อนทั้งหมดพร้อมกัน |
@@ -44,6 +44,6 @@
    - น้ำฝน HII มีหน่วยเป็น `มม./จังหวัด-เดือน` (เฉลี่ยทั้งจังหวัด)
    - จึงแสดงเปรียบเทียบแบบอนุกรมคู่ขนาน (Parallel Series) และกราฟแท่งคู่รายจังหวัดโดยไม่คำนวณผลต่างเชิงตัวเลขโดยตรง
 3. **การคำนวณความสัมพันธ์แบบเหลื่อมเวลา 1 เดือน (Q8 Lagged Correlation)**:
-   - จับคู่เฉพาะระเบียนของสถานีเดียวกันที่มีเดือนปฏิทินต่อเนื่องกันจริง (`t-1` ไป `t` เช่น ธ.ค. 2022 ต่อ ม.ค. 2023 หรือ ก.พ. ต่อ มี.ค.) โดยไม่ข้ามเดือนที่ข้อมูลขาดหาย
+   - จับคู่เฉพาะรายการข้อมูลของสถานีเดียวกันที่มีเดือนปฏิทินต่อเนื่องกันจริง (`t-1` ไป `t` เช่น ธ.ค. 2022 ต่อ ม.ค. 2023 หรือ ก.พ. ต่อ มี.ค.) โดยไม่ข้ามเดือนที่ข้อมูลขาดหาย
 4. **การกรองจุดความร้อนหลายมิติแบบ `AND` (Multi-dimensional Hotspot Cube)**:
    - ทุกตัวเลขจุดความร้อนใน KPI, แผนที่, กราฟรายเดือน, กราฟอำเภอ, กราฟที่ดิน, กราฟความสูง และกราฟโครงการ คำนวณจาก [`queryHotspotCube`](file:///c:/Users/kanok/OneDrive/เอกสาร/project_DataViz_Highland/js/filters.js) บนชุดข้อมูลเดียวกัน จึงได้ผลรวมตรงกัน 100% เสมอ

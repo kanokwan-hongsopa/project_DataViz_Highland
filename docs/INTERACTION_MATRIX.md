@@ -15,7 +15,7 @@
 | **Dropdown อำเภอ** (`#filter-district`) | `change` | `district` (+ ตรวจสอบ `tambon`, `stationId`) | กรองข้อมูลสถานีภูมิอากาศและจุดความร้อนตามอำเภอ พร้อมแสดงป้ายแจ้งเตือนว่าข้อมูลฝน HII เป็นระดับจังหวัด |
 | **Dropdown ตำบล** (`#filter-tambon`) | `change` | `tambon` (+ ตรวจสอบ `stationId`) | กรองข้อมูลสถานีและจุดความร้อนตามตำบลที่เลือก |
 | **Dropdown สถานีตรวจวัด** (`#filter-station`) | `change` | `stationId`, `province`, `district` | เลือกสถานีพร้อมตั้งค่าจังหวัดและอำเภอของสถานีนั้นโดยไม่ถูกล้างค่า (Fixed Cascading Update) |
-| **Dropdown แหล่งข้อมูลสถานี** (`#filter-weather-source`) | `change` | `weatherSource` (`all`, `OpenWeatherMap`, `HRDI Weather Station`) | กรองสถานีภูมิอากาศและระเบียนรายเดือนตาม `source_type` พร้อมอัปเดตป้ายจำนวนสถานี (`50` / `47` / `3` แห่ง) และกรองตัวเลือกใน Dropdown สถานี |
+| **Dropdown แหล่งข้อมูลสถานี** (`#filter-weather-source`) | `change` | `weatherSource` (`all`, `OpenWeatherMap`, `HRDI Weather Station`) | กรองสถานีภูมิอากาศและรายการข้อมูลรายเดือนตาม `source_type` พร้อมอัปเดตป้ายจำนวนสถานี (`50` / `47` / `3` แห่ง) และกรองตัวเลือกใน Dropdown สถานี |
 | **Dropdown ตัวแปรภูมิอากาศ** (`#filter-climate-metric`) | `change` | `climateMetric`, `overviewMapMetric` | เปลี่ยนตัวแปรที่แสดงบนกราฟแนวโน้ม, กราฟจัดอันดับจังหวัด, Box Plot, แผนที่ Choropleth และแท็บ Q2 |
 | **Dropdown ความสูงจุดความร้อน** (`#filter-hotspot-elevation`) | `change` | `hotspotElevation` (`all`, `high`, `low`) | กรองจุดความร้อนแบบ `AND` ร่วมกับทุกตัวกรองใน KPI, แผนที่ และกราฟจุดความร้อนทั้งหมด |
 | **Dropdown การใช้ประโยชน์ที่ดิน** (`#filter-hotspot-landuse`) | `change` | `hotspotLanduse` | กรองจุดความร้อนแบบ `AND` ตามหมวดการใช้ที่ดินจริง |

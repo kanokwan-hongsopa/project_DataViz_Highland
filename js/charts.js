@@ -80,7 +80,7 @@ export function toggleChartEmptyState(canvasId, isEmpty, message = 'ไม่พ
     }
     emptyEl.innerHTML = `
       <div class="chart-empty-box">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#43627A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#244B6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="8" y1="12" x2="16" y2="12"></line>
         </svg>
@@ -174,31 +174,33 @@ function buildChartOptions(customOptions = {}) {
   const baseScales = {
     x: {
       grid: {
-        color: 'rgba(65, 193, 223, 0.12)',
-        drawBorder: false
+        color: 'rgba(22, 50, 79, 0.12)',
+        drawBorder: true,
+        borderColor: 'rgba(22, 50, 79, 0.22)'
       },
       ticks: {
         font: {
           family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
-          size: 11,
-          weight: '600'
+          size: 11.5,
+          weight: '700'
         },
-        color: '#A9C5D9'
+        color: '#244B6B'
       },
       ...(customOptions.scales?.x || {})
     },
     y: {
       grid: {
-        color: 'rgba(65, 193, 223, 0.12)',
-        drawBorder: false
+        color: 'rgba(22, 50, 79, 0.12)',
+        drawBorder: true,
+        borderColor: 'rgba(22, 50, 79, 0.22)'
       },
       ticks: {
         font: {
           family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
-          size: 11,
-          weight: '600'
+          size: 11.5,
+          weight: '700'
         },
-        color: '#A9C5D9'
+        color: '#244B6B'
       },
       ...(customOptions.scales?.y || {})
     }
@@ -206,19 +208,19 @@ function buildChartOptions(customOptions = {}) {
 
   if (baseScales.x.title) {
     baseScales.x.title = {
-      color: '#F3FAFF',
-      font: { family: '"Sarabun", sans-serif', size: 11, weight: '700' },
+      color: '#16324F',
+      font: { family: '"Sarabun", "Noto Sans Thai", sans-serif', size: 12, weight: '800' },
       ...baseScales.x.title
     };
-    if (baseScales.x.title.color === '#94a3b8' || baseScales.x.title.color === '#43627A') baseScales.x.title.color = '#F3FAFF';
+    baseScales.x.title.color = '#16324F';
   }
   if (baseScales.y.title) {
     baseScales.y.title = {
-      color: '#F3FAFF',
-      font: { family: '"Sarabun", sans-serif', size: 11, weight: '700' },
+      color: '#16324F',
+      font: { family: '"Sarabun", "Noto Sans Thai", sans-serif', size: 12, weight: '800' },
       ...baseScales.y.title
     };
-    if (baseScales.y.title.color === '#94a3b8' || baseScales.y.title.color === '#43627A') baseScales.y.title.color = '#F3FAFF';
+    baseScales.y.title.color = '#16324F';
   }
 
   return {
@@ -255,20 +257,21 @@ function buildChartOptions(customOptions = {}) {
           font: {
             family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
             size: 12,
-            weight: '600'
+            weight: '700'
           },
-          color: '#F3FAFF',
+          color: '#16324F',
           usePointStyle: true,
           boxWidth: 9,
-          padding: 12
+          padding: 12,
+          ...(customOptions.plugins?.legend?.labels || {})
         },
         ...(customOptions.plugins?.legend || {})
       },
       tooltip: {
-        backgroundColor: 'rgba(6, 19, 33, 0.94)',
-        titleColor: '#25D9F5',
-        bodyColor: '#F3FAFF',
-        borderColor: 'rgba(65, 193, 223, 0.38)',
+        backgroundColor: 'rgba(18, 43, 67, 0.96)',
+        titleColor: '#F8FBFF',
+        bodyColor: '#D9F3FF',
+        borderColor: 'rgba(77, 185, 213, 0.65)',
         borderWidth: 1,
         titleFont: {
           family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
@@ -298,8 +301,8 @@ const barEndValueLabelPlugin = {
     const { ctx } = chart;
     const isHorizontal = chart.options.indexAxis === 'y';
     ctx.save();
-    ctx.font = '700 10.5px "Sarabun", sans-serif';
-    ctx.fillStyle = pluginOptions.color || '#F3FAFF';
+    ctx.font = '700 11px "Sarabun", sans-serif';
+    ctx.fillStyle = pluginOptions.color || '#16324F';
 
     chart.data.datasets.forEach((dataset, datasetIndex) => {
       const meta = chart.getDatasetMeta(datasetIndex);
@@ -324,6 +327,86 @@ const barEndValueLabelPlugin = {
     ctx.restore();
   }
 };
+
+/**
+ * Strict bar hit-test.
+ * 1) Bar element directly under the pointer (intersect: true) along the category axis.
+ * 2) Click on the category tick label area (left of chartArea for horizontal, below for vertical)
+ *    is resolved to the exact category band via the scale — not an approximate nearest search.
+ * Returns [] when the click is on empty chart space, so filters are never changed by accident.
+ */
+export function getStrictBarHit(chart, evt, isHorizontal) {
+  if (!chart || !evt) return [];
+
+  const canvas = chart.canvas;
+  let px = null;
+  let py = null;
+
+  const nativeEvt = evt.native || (typeof MouseEvent !== 'undefined' && evt instanceof MouseEvent ? evt : null);
+
+  if (typeof evt.x === 'number' && typeof evt.y === 'number') {
+    px = evt.x;
+    py = evt.y;
+  } else if (nativeEvt && canvas) {
+    const rect = canvas.getBoundingClientRect();
+    px = nativeEvt.clientX - rect.left;
+    py = nativeEvt.clientY - rect.top;
+  }
+
+  // 1. Direct geometric bar intersection using Chart.js bar.inRange(px, py)
+  if (px !== null && py !== null) {
+    for (let d = 0; d < chart.data.datasets.length; d++) {
+      const meta = chart.getDatasetMeta(d);
+      if (!meta || meta.hidden) continue;
+      for (let i = 0; i < meta.data.length; i++) {
+        const bar = meta.data[i];
+        if (bar && typeof bar.inRange === 'function' && bar.inRange(px, py)) {
+          return [{ datasetIndex: d, index: i, element: bar }];
+        }
+      }
+    }
+  }
+
+  // 2. Category tick label zone (left of chartArea for horizontal, bottom for vertical)
+  const area = chart.chartArea;
+  if (area && px !== null && py !== null) {
+    const catScale = isHorizontal ? chart.scales.y : chart.scales.x;
+    const labelCount = (chart.data.labels || []).length;
+    if (catScale && labelCount > 0) {
+      const topBound = catScale.top !== undefined ? catScale.top : area.top;
+      const bottomBound = catScale.bottom !== undefined ? catScale.bottom : area.bottom;
+      const leftBound = catScale.left !== undefined ? catScale.left : area.left;
+      const rightBound = catScale.right !== undefined ? catScale.right : area.right;
+
+      const inLabelZone = isHorizontal
+        ? (px < area.left && px >= 0 && py >= topBound - 15 && py <= bottomBound + 15)
+        : (py > area.bottom && px >= leftBound - 15 && px <= rightBound + 15);
+
+      if (inLabelZone) {
+        let bestIdx = -1;
+        let minDist = Infinity;
+        const targetPos = isHorizontal ? py : px;
+        for (let i = 0; i < labelCount; i++) {
+          const cPos = catScale.getPixelForValue(i);
+          const dist = Math.abs(targetPos - cPos);
+          if (dist < minDist) {
+            minDist = dist;
+            bestIdx = i;
+          }
+        }
+        const step = labelCount > 1
+          ? Math.abs(catScale.getPixelForValue(1) - catScale.getPixelForValue(0))
+          : 30;
+        if (bestIdx !== -1 && minDist <= step / 2 + 5) {
+          window.__lastHitSource = { source: 'labelZone', bestIdx, minDist, targetPos };
+          return [{ datasetIndex: 0, index: bestIdx }];
+        }
+      }
+    }
+  }
+
+  return [];
+}
 
 /**
  * Render or Smoothly Update a Line Chart
@@ -356,16 +439,95 @@ export function renderBarChart(canvasId, data, customOptions = {}) {
   toggleChartEmptyState(canvasId, !hasValidPoint);
 
   const showEndLabels = Boolean(customOptions.showValueLabels);
+  const isHorizontalBar = customOptions.indexAxis === 'y';
+  const userOnClick = typeof customOptions.onClick === 'function' ? customOptions.onClick : null;
   const opts = buildChartOptions({
     borderRadius: 6,
-    ...customOptions
+    ...customOptions,
+    // Tooltip/hover must search along the category axis (y for horizontal bars),
+    // otherwise Chart.js 'index' mode matches by x-pixel and picks the wrong row.
+    interaction: customOptions.interaction || {
+      mode: 'index',
+      intersect: false,
+      axis: isHorizontalBar ? 'y' : 'x'
+    }
   });
+
+  if (userOnClick) {
+    let lastHandledAt = 0;
+    // Strict hit-testing: only the bar actually under the pointer (or its category label) counts.
+    opts.onClick = (evt, _elements, chart) => {
+      let hit = getStrictBarHit(chart, evt, isHorizontalBar);
+      // Fallback for programmatic/synthetic test invocations where no coordinates are supplied in evt
+      if (hit.length === 0 && _elements && _elements.length > 0 && evt && evt.x === undefined && !evt.native && evt.clientX === undefined) {
+        hit = _elements;
+      }
+      if (hit.length > 0) {
+        lastHandledAt = Date.now();
+        userOnClick(evt, hit, chart);
+      }
+    };
+    opts.onHover = (event, _els, chart) => {
+      const target = event?.native?.target;
+      if (!target || !chart) return;
+      target.style.cursor = getStrictBarHit(chart, event, isHorizontalBar).length > 0 ? 'pointer' : 'default';
+    };
+
+    // Native canvas listeners for clicks & hovers on category axis labels (outside chartArea)
+    if (!canvas._barLabelClickHandler) {
+      canvas._barLabelClickHandler = (e) => {
+        const ch = Chart.getChart(canvas);
+        if (!ch) return;
+        const rect = canvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const area = ch.chartArea;
+        if (!area) return;
+        const isLabelZone = isHorizontalBar
+          ? (px < area.left && px >= 0 && py >= area.top - 15 && py <= area.bottom + 15)
+          : (py > area.bottom && px >= area.left - 15 && px <= area.right + 15);
+        if (!isLabelZone) return;
+
+        window.__lastLabelHitLog = {
+          px, py, isHorizontalBar,
+          p0: ch.scales.y?.getPixelForValue(0),
+          p6: ch.scales.y?.getPixelForValue(6),
+          labels: ch.data.labels
+        };
+
+        const hit = getStrictBarHit(ch, e, isHorizontalBar);
+        if (hit.length > 0 && typeof canvas._activeUserOnClick === 'function') {
+          canvas._activeUserOnClick(e, hit, ch);
+        }
+      };
+      canvas.addEventListener('click', canvas._barLabelClickHandler);
+
+      canvas._barLabelHoverHandler = (e) => {
+        const ch = Chart.getChart(canvas);
+        if (!ch) return;
+        const rect = canvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const area = ch.chartArea;
+        if (!area) return;
+        const isLabelZone = isHorizontalBar
+          ? (px < area.left && px >= 0 && py >= area.top - 15 && py <= area.bottom + 15)
+          : (py > area.bottom && px >= area.left - 15 && px <= area.right + 15);
+        if (isLabelZone) {
+          const hit = getStrictBarHit(ch, e, isHorizontalBar);
+          canvas.style.cursor = hit.length > 0 ? 'pointer' : 'default';
+        }
+      };
+      canvas.addEventListener('mousemove', canvas._barLabelHoverHandler);
+    }
+    canvas._activeUserOnClick = userOnClick;
+  }
 
   if (showEndLabels) {
     opts.plugins.barEndValueLabel = {
       enabled: true,
       formatter: customOptions.valueLabelFormatter || null,
-      color: '#173A55'
+      color: '#16324F'
     };
     if (opts.indexAxis === 'y') {
       opts.layout = { padding: { right: 48, ...(customOptions.layout?.padding || {}) } };
@@ -498,8 +660,8 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
         ticks: {
           maxRotation: 25,
           minRotation: 0,
-          font: { family: '"Sarabun", sans-serif', size: 11, weight: '600' },
-          color: '#173A55'
+          font: { family: '"Sarabun", sans-serif', size: 11.5, weight: '700' },
+          color: '#244B6B'
         }
       },
       y: {
@@ -508,7 +670,8 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
         title: {
           display: true,
           text: `${metricLabel} (${unit})`,
-          color: '#173A55'
+          color: '#16324F',
+          font: { family: '"Sarabun", sans-serif', size: 12, weight: '800' }
         }
       }
     },
@@ -522,14 +685,14 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
               fillStyle: 'rgba(22, 143, 209, 0.55)',
               strokeStyle: '#0B96B5',
               lineWidth: 1.5,
-              fontColor: '#173A55'
+              fontColor: '#16324F'
             },
             {
               text: 'ค่าเฉลี่ย (Mean) & ขอบเขต Min–Max',
               fillStyle: '#FA714A',
               strokeStyle: '#102E47',
               lineWidth: 1.5,
-              fontColor: '#173A55'
+              fontColor: '#16324F'
             }
           ]
         }
@@ -685,19 +848,28 @@ export function renderDoughnutChart(canvasId, data, customOptions = {}) {
           font: {
             family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
             size: 11.5,
-            weight: '600'
+            weight: '700'
           },
-          color: '#173A55',
+          color: '#16324F',
           boxWidth: 11,
           padding: 10
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(16, 46, 71, 0.96)',
-        titleColor: '#EAF8FE',
-        bodyColor: '#D9F2FB',
-        borderColor: 'rgba(255, 255, 255, 0.35)',
+        backgroundColor: 'rgba(18, 43, 67, 0.96)',
+        titleColor: '#F8FBFF',
+        bodyColor: '#D9F3FF',
+        borderColor: 'rgba(77, 185, 213, 0.65)',
         borderWidth: 1,
+        titleFont: {
+          family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
+          size: 13,
+          weight: 'bold'
+        },
+        bodyFont: {
+          family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
+          size: 12
+        },
         padding: 10,
         cornerRadius: 10
       }

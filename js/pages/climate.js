@@ -383,6 +383,7 @@ function renderClimateStationRanking(state, hrdiAll, metric, metricCfg) {
     datasets: [{
       label: `${metricCfg.label} (${metricCfg.unit})`,
       data,
+      stationItems: displayList,
       backgroundColor: displayList.map(s => state.stationId === s.id ? '#D97706' : '#0B96B5'),
       borderRadius: 5
     }]
@@ -390,10 +391,10 @@ function renderClimateStationRanking(state, hrdiAll, metric, metricCfg) {
     indexAxis: 'y',
     showValueLabels: true,
     valueLabelFormatter: (v) => formatNum(v, metricCfg.decimals),
-    onClick: (evt, elements) => {
+    onClick: (evt, elements, chart) => {
       if (elements && elements.length > 0) {
         const idx = elements[0].index;
-        const targetStation = displayList[idx];
+        const targetStation = chart?.data?.datasets?.[0]?.stationItems?.[idx] || displayList[idx];
         if (targetStation) {
           const isSame = state.stationId === targetStation.id;
           setState({

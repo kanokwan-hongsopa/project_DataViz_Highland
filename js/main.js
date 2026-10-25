@@ -549,6 +549,36 @@ function setupOverviewControls() {
       renderRainfallPage();
     });
   }
+
+  // Ranking sort order toggle (Overview Q1 Province Ranking)
+  const btnRankDesc = document.getElementById('btn-province-rank-desc');
+  const btnRankAsc = document.getElementById('btn-province-rank-asc');
+  if (btnRankDesc) {
+    btnRankDesc.addEventListener('click', () => setState({ provinceRankOrder: 'desc' }));
+  }
+  if (btnRankAsc) {
+    btnRankAsc.addEventListener('click', () => setState({ provinceRankOrder: 'asc' }));
+  }
+
+  // District ranking sort order toggle (Hotspots Q3 District Ranking)
+  const btnDistDesc = document.getElementById('btn-district-rank-desc');
+  const btnDistAsc = document.getElementById('btn-district-rank-asc');
+  if (btnDistDesc) {
+    btnDistDesc.addEventListener('click', () => setState({ districtRankOrder: 'desc' }));
+  }
+  if (btnDistAsc) {
+    btnDistAsc.addEventListener('click', () => setState({ districtRankOrder: 'asc' }));
+  }
+
+  // Low Rainfall / High Hotspot threshold toggle (Correlation Q4)
+  const btnThreshMed = document.getElementById('btn-thresh-median');
+  const btnThreshQtl = document.getElementById('btn-thresh-quartile');
+  if (btnThreshMed) {
+    btnThreshMed.addEventListener('click', () => setState({ lowRainThresholdType: 'median' }));
+  }
+  if (btnThreshQtl) {
+    btnThreshQtl.addEventListener('click', () => setState({ lowRainThresholdType: 'quartile' }));
+  }
 }
 
 /**

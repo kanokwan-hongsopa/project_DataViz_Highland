@@ -430,6 +430,211 @@
         </div>
       </section>
 
+      <!-- SECTION 1.5: TOP 3 PROVINCE RANKINGS & CLIMATE HIGHLIGHTS -->
+      <section id="province-highlights-section" class="scroll-section" aria-label="จังหวัดที่น่าจับตา Climate & Hotspot Highlights">
+        <div class="highlights-container glass-card">
+          <!-- Section Header Row -->
+          <div class="highlights-header-row">
+            <div class="highlights-title-block">
+              <div class="highlights-tag-pill">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>ไฮไลต์ 9 จังหวัดศึกษา</span>
+              </div>
+              <h2 class="highlights-heading">
+                จังหวัดที่น่าจับตา <span class="highlights-sub-lead">| Climate &amp; Hotspot Highlights</span>
+              </h2>
+              <p class="highlights-description">
+                จังหวัดไหนมีฝนมาก ความชื้นสูง อากาศร้อน และจุดความร้อนมากที่สุด?
+              </p>
+            </div>
+
+            <!-- Mode Controls (Compare Mode Year Toggle & Active Period Badge) -->
+            <div class="highlights-header-controls">
+              <div id="highlights-year-toggle" class="highlights-year-toggle" style="display: none;">
+                <span class="toggle-lead-txt">อันดับข้อมูลปี:</span>
+                <div class="btn-group-toggle" role="group" aria-label="เลือกปีสำหรับอันดับ">
+                  <button type="button" class="btn-highlight-year active" data-highlight-year="2023">ปี 2023</button>
+                  <button type="button" class="btn-highlight-year" data-highlight-year="2022">ปี 2022</button>
+                </div>
+              </div>
+              <span id="highlights-period-badge" class="highlights-period-badge">ม.ค. – ก.ย. 2023</span>
+            </div>
+          </div>
+
+          <!-- Single Province Filter Notice Banner -->
+          <div id="highlights-province-notice" class="highlights-province-notice" style="display: none;">
+            <div class="notice-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </div>
+            <div class="notice-content">
+              <span id="highlights-notice-text">กำลังเน้นข้อมูลจังหวัด...</span>
+            </div>
+            <button type="button" id="btn-highlights-clear-prov" class="btn-notice-clear" title="ล้างตัวกรองจังหวัดเพื่อดูภาพรวม 9 จังหวัด">
+              ✕ กลับสู่ภาพรวม 9 จังหวัด
+            </button>
+          </div>
+
+          <!-- 4 Highlight Cards Grid -->
+          <div class="highlights-grid-4">
+
+            <!-- Card 1: Rain -->
+            <article class="highlight-card highlight-rain" data-metric="rain">
+              <div class="highlight-card-header">
+                <div class="metric-icon-box rain">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                    <path d="M16 14v6"></path>
+                    <path d="M8 14v6"></path>
+                    <path d="M12 16v6"></path>
+                  </svg>
+                </div>
+                <div class="metric-title-block">
+                  <h3 class="metric-title">จังหวัดที่มีฝนมากที่สุด</h3>
+                  <span class="metric-source-tag">ข้อมูลระดับจังหวัด HII</span>
+                </div>
+              </div>
+              <div class="top-rank-hero rain-hero" id="card-rain-top1"></div>
+              <div class="sub-ranks-list" id="card-rain-subranks"></div>
+              <div class="highlight-card-footer">
+                <span class="calc-period-label" id="card-rain-period">ม.ค. – ก.ย. · เฉลี่ยรายเดือน</span>
+                <button type="button" class="btn-view-all-ranks" data-metric="rain" aria-label="ดูอันดับปริมาณน้ำฝนทั้งหมด 9 จังหวัด">
+                  <span>ดูอันดับทั้งหมด</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </article>
+
+            <!-- Card 2: Humidity -->
+            <article class="highlight-card highlight-humidity" data-metric="humidity">
+              <div class="highlight-card-header">
+                <div class="metric-icon-box humidity">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                  </svg>
+                </div>
+                <div class="metric-title-block">
+                  <h3 class="metric-title">จังหวัดที่มีความชื้นสูงที่สุด</h3>
+                  <span class="metric-source-tag">สถานีตรวจวัดในจังหวัด</span>
+                </div>
+              </div>
+              <div class="top-rank-hero humidity-hero" id="card-hum-top1"></div>
+              <div class="sub-ranks-list" id="card-hum-subranks"></div>
+              <div class="highlight-card-footer">
+                <span class="calc-period-label" id="card-hum-period">ม.ค. – ก.ย. · ค่าเฉลี่ยสถานี</span>
+                <button type="button" class="btn-view-all-ranks" data-metric="humidity" aria-label="ดูอันดับความชื้นสัมพัทธ์ทั้งหมด 9 จังหวัด">
+                  <span>ดูอันดับทั้งหมด</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </article>
+
+            <!-- Card 3: Temperature -->
+            <article class="highlight-card highlight-temp" data-metric="temp">
+              <div class="highlight-card-header">
+                <div class="metric-icon-box temp">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path>
+                  </svg>
+                </div>
+                <div class="metric-title-block">
+                  <h3 class="metric-title">จังหวัดที่มีอุณหภูมิสูงที่สุด</h3>
+                  <span class="metric-source-tag">สถานีตรวจวัดในจังหวัด</span>
+                </div>
+              </div>
+              <div class="top-rank-hero temp-hero" id="card-temp-top1"></div>
+              <div class="sub-ranks-list" id="card-temp-subranks"></div>
+              <div class="highlight-card-footer">
+                <span class="calc-period-label" id="card-temp-period">ม.ค. – ก.ย. · ค่าเฉลี่ยสถานี</span>
+                <button type="button" class="btn-view-all-ranks" data-metric="temp" aria-label="ดูอันดับอุณหภูมิเฉลี่ยทั้งหมด 9 จังหวัด">
+                  <span>ดูอันดับทั้งหมด</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </article>
+
+            <!-- Card 4: Hotspots -->
+            <article class="highlight-card highlight-hotspots" data-metric="hotspots">
+              <div class="highlight-card-header">
+                <div class="metric-icon-box hotspots">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+                  </svg>
+                </div>
+                <div class="metric-title-block">
+                  <h3 class="metric-title">จังหวัดที่มีจุดความร้อนมากที่สุด</h3>
+                  <span class="metric-source-tag">ดาวเทียม VIIRS 375m</span>
+                </div>
+              </div>
+              <div class="top-rank-hero hotspots-hero" id="card-hs-top1"></div>
+              <div class="sub-ranks-list" id="card-hs-subranks"></div>
+              <div class="highlight-card-footer">
+                <span class="calc-period-label" id="card-hs-period">จุดความร้อนที่ดาวเทียมตรวจพบ</span>
+                <button type="button" class="btn-view-all-ranks" data-metric="hotspots" aria-label="ดูอันดับจุดความร้อนทั้งหมด 9 จังหวัด">
+                  <span>ดูอันดับทั้งหมด</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </article>
+
+          </div>
+
+          <!-- Dynamic Insights Strip -->
+          <div class="highlights-insights-strip" id="highlights-insights-strip">
+            <!-- Dynamically populated 1-sentence takeaways -->
+          </div>
+
+          <!-- Expandable / Modal Panel: All 9 Provinces Detailed Rankings -->
+          <div id="highlights-expanded-panel" class="highlights-expanded-panel" style="display: none;">
+            <div class="expanded-panel-header">
+              <div class="expanded-title-group">
+                <span class="expanded-badge-metric" id="expanded-metric-badge">ปริมาณน้ำฝน</span>
+                <h3 class="expanded-heading" id="expanded-panel-title">อันดับจังหวัดทั้งหมด: ปริมาณน้ำฝน (HII)</h3>
+                <p class="expanded-sub" id="expanded-panel-sub">เรียงจากมากไปน้อย (คลิกชื่อจังหวัดเพื่อกรองข้อมูลและซูมแผนที่)</p>
+              </div>
+              <div class="expanded-controls-group">
+                <!-- Metric Selector tabs -->
+                <div class="expanded-metric-tabs" role="tablist" aria-label="เลือกตัวชี้วัดอันดับ">
+                  <button type="button" class="expanded-tab-btn active" data-expanded-metric="rain">🌧️ ฝนมากสุด</button>
+                  <button type="button" class="expanded-tab-btn" data-expanded-metric="humidity">💧 ความชื้นสูง</button>
+                  <button type="button" class="expanded-tab-btn" data-expanded-metric="temp">🌡️ ร้อนที่สุด</button>
+                  <button type="button" class="expanded-tab-btn" data-expanded-metric="hotspots">🔥 จุดความร้อน</button>
+                </div>
+                <button type="button" id="btn-close-expanded-panel" class="btn-close-expanded" aria-label="ปิดอันดับทั้งหมด">✕ ปิด</button>
+              </div>
+            </div>
+
+            <!-- Two-column detailed ranking view: Left: Bar Chart, Right: Table with Data Completeness & Notes -->
+            <div class="expanded-panel-body">
+              <div class="expanded-chart-col">
+                <div class="chart-canvas-wrapper" style="height: 340px;">
+                  <canvas id="highlights-all-provinces-chart"></canvas>
+                </div>
+              </div>
+              <div class="expanded-table-col">
+                <div class="expanded-ranking-list" id="expanded-ranking-list">
+                  <!-- Dynamically populated 9-province ranked list with click handler -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <!-- SECTION 2: LARGE FULL-WIDTH INTERACTIVE GEOJSON MAP -->
       <section id="map-and-station-detail-section" class="scroll-section" aria-label="แผนที่พื้นที่ศึกษา 9 จังหวัดและรายละเอียดสถานีตรวจวัด">
         <div class="map-station-split-grid">
@@ -608,6 +813,12 @@
               <p id="overview-ranking-subtitle" class="card-subtitle">คลิกที่แท่งจังหวัดเพื่อกรองข้อมูลทั้งหน้า</p>
               <div id="pop-rank-q1" class="info-popover-box" role="tooltip">
                 <strong>การจัดอันดับจังหวัด (Q5 &amp; Q9):</strong> เรียงลำดับจากค่าจริงภายใต้ตัวกรองที่เลือก คลิกแท่งจังหวัดเพื่อกรองหรือยกเลิกการเลือกจังหวัด
+              </div>
+            </div>
+            <div class="header-action-toggles">
+              <div class="ranking-sort-toggle btn-group-toggle" role="group" aria-label="เรียงลำดับอันดับจังหวัด">
+                <button type="button" class="btn-toggle active" id="btn-province-rank-desc" data-sort="desc">มากไปน้อย (สูงสุด)</button>
+                <button type="button" class="btn-toggle" id="btn-province-rank-asc" data-sort="asc">น้อยไปมาก (ต่ำสุด)</button>
               </div>
             </div>
           </div>
@@ -865,10 +1076,18 @@
       <div class="scroll-section">
         <div class="glass-card full-width-section-card">
           <div class="card-header-bar">
-            <div class="title-row-inline">
-              <h2 class="card-title">อำเภอไหนพบจุดความร้อนมากที่สุด?</h2>
+            <div>
+              <div class="title-row-inline">
+                <h2 id="hotspots-district-ranking-title" class="card-title">อำเภอไหนพบจุดความร้อนมากที่สุด?</h2>
+              </div>
+              <p id="hotspots-district-ranking-sub" class="card-subtitle">แสดง 12 อันดับแรก (มากไปน้อย) · คลิกแท่งอำเภอเพื่อกรองจังหวัดและอำเภอ</p>
             </div>
-            <p class="card-subtitle">แสดง 12 อันดับแรก · คลิกแท่งอำเภอเพื่อกรองจังหวัดและอำเภอ</p>
+            <div class="header-action-toggles">
+              <div class="ranking-sort-toggle btn-group-toggle" role="group" aria-label="เรียงลำดับอำเภอ">
+                <button type="button" class="btn-toggle active" id="btn-district-rank-desc" data-sort="desc">มากไปน้อย</button>
+                <button type="button" class="btn-toggle" id="btn-district-rank-asc" data-sort="asc">น้อยไปมาก</button>
+              </div>
+            </div>
           </div>
           <div class="chart-box-xl">
             <canvas id="hotspots-district-ranking-chart"></canvas>
@@ -1032,6 +1251,46 @@
             <div id="q8-plain-summary" class="chart-plain-takeaway">กำลังคำนวณความสัมพันธ์แบบเหลื่อมเวลา...</div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- SECTION 2.5: LOW RAINFALL & HIGH HOTSPOT EXPLORER -->
+      <div class="scroll-section">
+        <div class="glass-card full-width-section-card">
+          <div class="card-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <h2 class="card-title">สำรวจคู่ข้อมูลฝนต่ำและจุดความร้อนสูง (Low Rainfall / High Hotspot Explorer)</h2>
+                <button type="button" class="info-popover-btn" aria-label="เกณฑ์ทางสถิติฝนต่ำและจุดความร้อนสูง" data-popover-target="pop-low-rain-explorer">i</button>
+              </div>
+              <p id="low-rain-explorer-subtitle" class="card-subtitle">
+                แสดงสถานี–เดือนที่เข้าเกณฑ์ฝนต่ำและจุดความร้อนสูงตามการกระจายข้อมูลจริง 2022–2023 · คลิกแถวเพื่อกรองและเจาะลึก
+              </p>
+              <div id="pop-low-rain-explorer" class="info-popover-box" role="tooltip">
+                <strong>การสำรวจกลุ่มข้อมูลฝนต่ำ–จุดความร้อนสูง:</strong> คำนวณเกณฑ์ตัดจากมัธยฐาน (Median) หรือควอไทล์ (Q1 ฝน, Q3 จุดความร้อน) ของข้อมูลจริงเพื่อระบุช่วงเวลาและพื้นที่ที่มีภาวะแห้งแล้งร่วมกับการตรวจพบจุดความร้อนหนาแน่น (เป็นการวิเคราะห์เชิงสำรวจย้อนหลัง ไม่ใช่ความสัมพันธ์เชิงสาเหตุ)
+              </div>
+            </div>
+            <div class="header-action-toggles">
+              <div class="threshold-toggle btn-group-toggle" role="group" aria-label="เลือกเกณฑ์สถิติ">
+                <button type="button" class="btn-toggle active" id="btn-thresh-median" data-threshold="median">เกณฑ์มัธยฐาน (≤ Median ฝน, ≥ Median จุด)</button>
+                <button type="button" class="btn-toggle" id="btn-thresh-quartile" data-threshold="quartile">เกณฑ์ควอไทล์ (≤ Q1 ฝน, ≥ Q3 จุด)</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="low-rain-stat-pills" id="low-rain-stat-summary">
+            <!-- Dynamic statistical badges rendered here -->
+          </div>
+
+          <div class="explorer-table-container">
+            <div id="low-rain-explorer-table-wrapper" class="explorer-table-scroll">
+              <!-- Dynamic table rendered here -->
+            </div>
+          </div>
+
+          <div class="chart-plain-takeaway notice-noncausal">
+            <strong>⚠️ ข้อสังเกตเชิงสถิติ:</strong> การจัดกลุ่มนี้เป็นการวิเคราะห์เชิงสำรวจ (Exploratory Quadrant Analysis) จากข้อมูลย้อนหลัง 2022–2023 โดยสหสัมพันธ์ที่พบ (Negative Correlation) ไม่ได้พิสูจน์ว่าเป็นเหตุและผลโดยตรง (Non-causal) แต่สะท้อนภาวะแห้งแล้งในฤดูร้อนร่วมกับช่วงที่มีกิจกรรมการเผาในพื้นที่สูง
+          </div>
         </div>
       </div>
 

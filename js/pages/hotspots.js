@@ -322,16 +322,39 @@ function renderHotspotElevationAndProjectCharts(state) {
  * Render District Drilldown Ranking (Top 12 Districts) — Multidimensional AND + Click-to-Filter
  */
 function renderHotspotDistrictRanking(state) {
+  const isAsc = state.districtRankOrder === 'asc';
   const list = getHotspotByDistrictBreakdown(state, false);
-  const topList = list.slice(0, 12);
+  const sortedList = [...list].sort((a, b) => isAsc ? (a.total - b.total) : (b.total - a.total));
+  const topList = sortedList.slice(0, 12);
   const labels = topList.map((item, i) => `${i + 1}. อ.${item.district} (${item.province})`);
   const data = topList.map(item => item.total);
+
+  const btnDesc = document.getElementById('btn-district-rank-desc');
+  const btnAsc = document.getElementById('btn-district-rank-asc');
+  if (btnDesc && btnAsc) {
+    btnDesc.classList.toggle('active', !isAsc);
+    btnAsc.classList.toggle('active', isAsc);
+  }
+
+  const titleEl = document.getElementById('hotspots-district-ranking-title');
+  if (titleEl) {
+    titleEl.textContent = isAsc
+      ? 'อำเภอไหนพบจุดความร้อนน้อยที่สุด?'
+      : 'อำเภอไหนพบจุดความร้อนมากที่สุด?';
+  }
+
+  const subEl = document.getElementById('hotspots-district-ranking-sub');
+  if (subEl) {
+    const dirTxt = isAsc ? 'น้อยไปมาก' : 'มากไปน้อย';
+    subEl.textContent = `แสดง 12 อันดับ (${dirTxt}) · คลิกแท่งอำเภอเพื่อกรองจังหวัดและอำเภอ`;
+  }
 
   renderBarChart('hotspots-district-ranking-chart', {
     labels,
     datasets: [{
       label: 'จำนวนรายการตรวจพบจุดความร้อน',
       data,
+      districtItems: topList,
       backgroundColor: topList.map(d => (state.district === d.district && state.province === d.province) ? '#D97706' : '#FA714A'),
       borderRadius: 5
     }]
@@ -339,10 +362,10 @@ function renderHotspotDistrictRanking(state) {
     indexAxis: 'y',
     showValueLabels: true,
     valueLabelFormatter: (v) => formatInt(v),
-    onClick: (evt, elements) => {
+    onClick: (evt, elements, chart) => {
       if (elements && elements.length > 0) {
         const idx = elements[0].index;
-        const item = topList[idx];
+        const item = chart?.data?.datasets?.[0]?.districtItems?.[idx] || topList[idx];
         if (item) {
           const isSame = state.province === item.province && state.district === item.district;
           setState({

@@ -38,6 +38,7 @@ import {
   renderLineChart,
   renderBarChart,
   renderBoxPlotChart,
+  getStrictBarHit,
   THAI_MONTH_NAMES,
   YEAR_COLORS
 } from '../charts.js';
@@ -59,6 +60,12 @@ const QUESTION_TITLES_Q1 = {
     trend: 'อุณหภูมิรายเดือนปี 2022 กับ 2023 ต่างกันอย่างไร?',
     ranking: 'จังหวัดไหนมีอุณหภูมิเฉลี่ยสูงที่สุด?',
     dist: 'อุณหภูมิในแต่ละพื้นที่ต่างกันแค่ไหน?'
+  },
+  rankingAsc: {
+    temp: 'จังหวัดไหนมีอุณหภูมิเฉลี่ยต่ำที่สุด?',
+    humidity: 'จังหวัดไหนมีความชื้นสัมพัทธ์ต่ำที่สุด?',
+    rainfall: 'จังหวัดไหนมีปริมาณฝนเฉลี่ยน้อยที่สุด?',
+    hotspots: 'จังหวัดไหนพบจุดความร้อนน้อยที่สุด?'
   },
   humidity: {
     map: 'พื้นที่ไหนมีความชื้นสัมพัทธ์สูงหรือต่ำกว่ากัน?',
@@ -113,6 +120,9 @@ export function renderOverviewPage() {
   // 1. Render 5 Clean KPI Cards with (i) popover details
   renderOverviewKpis(state, hrdi2022, hrdi2023, hrdiAll, hii2022, hii2023, hiiAll, hotspots2022, hotspots2023, hotspotTotal);
 
+  // 1.5 Render Highlights Section: จังหวัดที่น่าจับตา (Climate & Hotspot Highlights)
+  renderProvinceHighlights(state);
+
   // 2. Render Pure GeoJSON Choropleth Map (No external tiles / No API Key required)
   renderOverviewMap(state);
 
@@ -152,7 +162,11 @@ function updateOverviewQuestionTitles(state) {
   if (trendTitleEl) trendTitleEl.textContent = cfg.trend;
 
   const rankTitleEl = document.getElementById('overview-ranking-title');
-  if (rankTitleEl) rankTitleEl.textContent = cfg.ranking;
+  if (rankTitleEl) {
+    rankTitleEl.textContent = state.provinceRankOrder === 'asc'
+      ? (QUESTION_TITLES_Q1.rankingAsc[m] || 'จังหวัดไหนมีค่าน้อยที่สุด?')
+      : cfg.ranking;
+  }
 
   const distTitleEl = document.getElementById('overview-distribution-title');
   if (distTitleEl) distTitleEl.textContent = cfg.dist;
@@ -1366,7 +1380,7 @@ function renderStationDetailCharts(state) {
             const cell = (rec, f, d = 1) =>
               rec && rec[f] !== null && rec[f] !== undefined
                 ? formatNum(rec[f], d)
-                : '<span style="color:#94A3B8;">ไม่มีข้อมูล</span>';
+                : '<span style="color:#244B6B; font-weight:600;">ไม่มีข้อมูล</span>';
             const hs22Str = r22 && r22.hotspots_within_10km !== undefined ? formatInt(r22.hotspots_within_10km) : '—';
             const hs23Str = r23 && r23.hotspots_within_10km !== undefined ? formatInt(r23.hotspots_within_10km) : '—';
             return `
@@ -1578,16 +1592,28 @@ function renderOverviewProvinceRanking(state) {
     }).filter(d => d.sortVal !== null && d.sortVal !== undefined);
   }
 
-  provData.sort((a, b) => (b.sortVal ?? -Infinity) - (a.sortVal ?? -Infinity));
+  const isAsc = state.provinceRankOrder === 'asc';
+  provData.sort((a, b) => isAsc
+    ? (a.sortVal ?? Infinity) - (b.sortVal ?? Infinity)
+    : (b.sortVal ?? -Infinity) - (a.sortVal ?? -Infinity)
+  );
+
+  const btnDesc = document.getElementById('btn-province-rank-desc');
+  const btnAsc = document.getElementById('btn-province-rank-asc');
+  if (btnDesc && btnAsc) {
+    btnDesc.classList.toggle('active', !isAsc);
+    btnAsc.classList.toggle('active', isAsc);
+  }
 
   const rankSubEl = document.getElementById('overview-ranking-subtitle');
   if (rankSubEl) {
+    const sortDirLabel = isAsc ? 'น้อยไปมาก (ต่ำสุด)' : 'มากไปน้อย (สูงสุด)';
     if (state.province) {
       const rankIdx = provData.findIndex(d => d.province === state.province);
-      const rankText = rankIdx !== -1 ? `อันดับที่ ${rankIdx + 1} จาก ${provData.length} จังหวัด` : 'ไม่มีข้อมูลในแหล่งที่เลือก';
+      const rankText = rankIdx !== -1 ? `อันดับที่ ${rankIdx + 1} จาก ${provData.length} จังหวัด (${sortDirLabel})` : 'ไม่มีข้อมูลในแหล่งที่เลือก';
       rankSubEl.textContent = `เน้นจังหวัด${state.province} (${rankText}) — คลิกซ้ำเพื่อกลับภาพรวม`;
     } else {
-      rankSubEl.textContent = `เรียงตามค่าจริง (${unitText}) · คลิกที่แท่งจังหวัดเพื่อกรอง`;
+      rankSubEl.textContent = `เรียงตามค่าจริง ${sortDirLabel} (${unitText}) · คลิกที่แท่งจังหวัดเพื่อกรอง`;
     }
   }
 
@@ -1603,6 +1629,7 @@ function renderOverviewProvinceRanking(state) {
     datasets.push({
       label: 'ปี 2022',
       data: provData.map(d => d.val2022),
+      provinceKeys: provData.map(d => d.province),
       backgroundColor: provData.map(d => getBarColor(d.province, YEAR_COLORS.y2022, '#D97706')),
       borderRadius: 4
     });
@@ -1611,6 +1638,7 @@ function renderOverviewProvinceRanking(state) {
     datasets.push({
       label: 'ปี 2023',
       data: provData.map(d => d.val2023),
+      provinceKeys: provData.map(d => d.province),
       backgroundColor: provData.map(d => getBarColor(d.province, YEAR_COLORS.y2023, '#0B96B5')),
       borderRadius: 4
     });
@@ -1623,12 +1651,17 @@ function renderOverviewProvinceRanking(state) {
     indexAxis: 'y',
     showValueLabels: true,
     valueLabelFormatter: (val) => decimals === 0 ? formatInt(val) : formatNum(val, 1),
-    onClick: (evt, elements) => {
+    onClick: (evt, elements, chart) => {
       if (elements && elements.length > 0) {
         const idx = elements[0].index;
-        const clickedProv = provData[idx]?.province;
+        // Resolve province from the chart's current data mapping (post-sort) or label text, never a stale array
+        const keys = chart?.data?.datasets?.[0]?.provinceKeys;
+        const labelText = chart?.data?.labels?.[idx];
+        const labelClean = labelText ? String(labelText).replace(/^[0-9]+\.\s*/, '').trim() : null;
+        const clickedProv = (keys && keys[idx]) || labelClean || provData[idx]?.province;
         if (clickedProv) {
-          setState({ province: state.province === clickedProv ? null : clickedProv });
+          const cur = getState();
+          setState({ province: cur.province === clickedProv ? null : clickedProv });
         }
       }
     },
@@ -1773,4 +1806,521 @@ function renderOverviewKeyInsights(state, hrdi2022, hrdi2023, hrdiAll, hotspots2
   }
 
   insightEl.textContent = parts.join(' · ');
+}
+
+/* ==========================================================================
+   SECTION 1.5: TOP 3 PROVINCE RANKINGS & CLIMATE HIGHLIGHTS
+   ========================================================================== */
+
+let highlightsCompareYear = 2023;
+let activeExpandedMetric = 'rain'; // 'rain' | 'humidity' | 'temp' | 'hotspots'
+let isExpandedPanelOpen = false;
+let highlightsChartInstance = null;
+
+// Expose click handler for global province selection
+window.selectHighlightProvince = function(prov) {
+  if (!prov) return;
+  const currentState = getState();
+  // Toggle: if clicking the already selected province, clear it; else set it
+  const newProv = currentState.province === prov ? null : prov;
+  setState({ province: newProv, district: null, tambon: null, stationId: null });
+
+  // Smooth scroll to map section if selecting
+  if (newProv) {
+    setTimeout(() => {
+      const mapSec = document.getElementById('map-and-station-detail-section');
+      if (mapSec) {
+        mapSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  }
+};
+
+/**
+ * Render Section 1.5: จังหวัดที่น่าจับตา (Climate & Hotspot Highlights)
+ */
+function renderProvinceHighlights(state) {
+  const container = document.getElementById('province-highlights-section');
+  if (!container) return;
+
+  const db = getDb();
+  if (!db || !db.hrdiStationMonth || !db.hiiProvinceMonth) return;
+
+  // 1. Determine effective year for highlights
+  let effectiveYear = 2023;
+  const yearToggleEl = document.getElementById('highlights-year-toggle');
+  if (state.yearMode === 'compare') {
+    effectiveYear = highlightsCompareYear;
+    if (yearToggleEl) {
+      yearToggleEl.style.display = 'flex';
+      const yearBtns = yearToggleEl.querySelectorAll('.btn-highlight-year');
+      yearBtns.forEach(b => {
+        const y = Number(b.dataset.highlightYear);
+        b.classList.toggle('active', y === effectiveYear);
+        b.onclick = (e) => {
+          e.stopPropagation();
+          highlightsCompareYear = y;
+          renderProvinceHighlights(getState());
+        };
+      });
+    }
+  } else {
+    effectiveYear = Number(state.yearMode) || 2023;
+    if (yearToggleEl) yearToggleEl.style.display = 'none';
+  }
+
+  // 2. Format Period Badge
+  const periodBadge = document.getElementById('highlights-period-badge');
+  const selectedMonths = state.selectedMonths || DEFAULT_MONTHS_COMPARE;
+  const monthSet = new Set(selectedMonths);
+  const minM = Math.min(...selectedMonths);
+  const maxM = Math.max(...selectedMonths);
+  const periodText = (minM === 1 && maxM === 9 && selectedMonths.length === 9)
+    ? `ม.ค. – ก.ย. ${effectiveYear} (9 เดือน)`
+    : (minM === 1 && maxM === 12 && selectedMonths.length === 12)
+      ? `ม.ค. – ธ.ค. ${effectiveYear} (12 เดือน)`
+      : `${THAI_MONTH_NAMES[minM - 1]} – ${THAI_MONTH_NAMES[maxM - 1]} ${effectiveYear} (${selectedMonths.length} เดือน)`;
+
+  if (periodBadge) periodBadge.textContent = periodText;
+
+  // 3. Compute Ground Truth Rankings for all 4 Metrics across 9 provinces
+  // A. Rain (HII)
+  const rainList = STUDY_PROVINCES.map(prov => {
+    const rows = (db.hiiProvinceMonth || []).filter(r =>
+      r.province === prov &&
+      r.year === effectiveYear &&
+      monthSet.has(r.month) &&
+      r.hii_avg_rain !== null &&
+      r.hii_avg_rain !== undefined
+    );
+    const meanVal = rows.length > 0 ? rows.reduce((s, r) => s + r.hii_avg_rain, 0) / rows.length : null;
+    return {
+      province: prov,
+      value: meanVal,
+      count: rows.length,
+      expected: selectedMonths.length,
+      unit: 'มม./เดือน',
+      metricName: 'ปริมาณน้ำฝน (HII)',
+      source: 'ข้อมูลระดับจังหวัด HII'
+    };
+  }).filter(d => d.value !== null);
+  rainList.sort((a, b) => b.value - a.value);
+
+  // B. Humidity (HRDI Station)
+  const stateNoProv = { ...state, province: null, district: null, tambon: null, stationId: null };
+  const hrdiRows = filterStationMonthRecords(db.hrdiStationMonth, stateNoProv, effectiveYear);
+  const humList = STUDY_PROVINCES.map(prov => {
+    const pRows = hrdiRows.filter(r => r.province === prov && monthSet.has(r.month) && r.humidity !== null && r.humidity !== undefined);
+    const meanVal = pRows.length > 0 ? calculateMean(pRows, 'humidity').mean : null;
+    const stnCount = new Set(pRows.map(r => r.station_id)).size;
+    return {
+      province: prov,
+      value: meanVal,
+      count: pRows.length,
+      stations: stnCount,
+      unit: '%',
+      metricName: 'ความชื้นสัมพัทธ์',
+      source: 'สถานีตรวจวัดในจังหวัด'
+    };
+  }).filter(d => d.value !== null);
+  humList.sort((a, b) => b.value - a.value);
+
+  // C. Temperature (HRDI Station)
+  const tempList = STUDY_PROVINCES.map(prov => {
+    const pRows = hrdiRows.filter(r => r.province === prov && monthSet.has(r.month) && r.temp !== null && r.temp !== undefined);
+    const meanVal = pRows.length > 0 ? calculateMean(pRows, 'temp').mean : null;
+    const stnCount = new Set(pRows.map(r => r.station_id)).size;
+    return {
+      province: prov,
+      value: meanVal,
+      count: pRows.length,
+      stations: stnCount,
+      unit: '°C',
+      metricName: 'อุณหภูมิเฉลี่ย',
+      source: 'สถานีตรวจวัดในจังหวัด'
+    };
+  }).filter(d => d.value !== null);
+  tempList.sort((a, b) => b.value - a.value);
+
+  // D. Hotspots (VIIRS Satellite)
+  const hsList = STUDY_PROVINCES.map(prov => {
+    const pState = { ...state, province: prov, district: null, tambon: null, stationId: null };
+    const totalHs = getFilteredHotspotCount(pState, effectiveYear);
+    return {
+      province: prov,
+      value: totalHs,
+      count: totalHs,
+      unit: 'จุด',
+      metricName: 'จุดความร้อนดาวเทียม',
+      source: 'ดาวเทียม VIIRS 375m'
+    };
+  });
+  hsList.sort((a, b) => b.value - a.value);
+
+  // 4. Single Province Active Notice
+  const noticeEl = document.getElementById('highlights-province-notice');
+  const noticeTxt = document.getElementById('highlights-notice-text');
+  const clearProvBtn = document.getElementById('btn-highlights-clear-prov');
+
+  if (state.province) {
+    if (noticeEl) noticeEl.style.display = 'flex';
+    const rRain = rainList.findIndex(d => d.province === state.province) + 1;
+    const rHum = humList.findIndex(d => d.province === state.province) + 1;
+    const rTemp = tempList.findIndex(d => d.province === state.province) + 1;
+    const rHs = hsList.findIndex(d => d.province === state.province) + 1;
+
+    if (noticeTxt) {
+      noticeTxt.innerHTML = `กำลังเน้นข้อมูล: <strong>จังหวัด${state.province}</strong> · อันดับฝน #${rRain > 0 ? rRain : 'N/A'}, อันดับความชื้น #${rHum > 0 ? rHum : 'N/A'}, อันดับอุณหภูมิ #${rTemp > 0 ? rTemp : 'N/A'}, อันดับจุดความร้อน #${rHs > 0 ? rHs : 'N/A'} (จาก 9 จังหวัดศึกษา)`;
+    }
+    if (clearProvBtn) {
+      clearProvBtn.onclick = () => {
+        setState({ province: null, district: null, tambon: null, stationId: null });
+      };
+    }
+  } else {
+    if (noticeEl) noticeEl.style.display = 'none';
+  }
+
+  // 5. Render Top 3 Cards
+  renderSingleHighlightCard('rain', rainList, state.province, `${periodText} · เฉลี่ยรายเดือน`, 'มม./เดือน');
+  renderSingleHighlightCard('hum', humList, state.province, `${periodText} · เฉลี่ยจากสถานี`, '%');
+  renderSingleHighlightCard('temp', tempList, state.province, `${periodText} · เฉลี่ยจากสถานี`, '°C');
+  renderSingleHighlightCard('hs', hsList, state.province, 'จุดความร้อนที่ดาวเทียมตรวจพบ', 'จุด');
+
+  // 6. Hook "ดูอันดับทั้งหมด" Buttons
+  const dataBundles = { rainList, humList, tempList, hsList };
+  const viewAllBtns = container.querySelectorAll('.btn-view-all-ranks');
+  viewAllBtns.forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const metric = btn.dataset.metric;
+      openExpandedHighlightsPanel(metric, dataBundles, state, periodText);
+    };
+  });
+
+  // 7. Render Dynamic Insights Strip
+  renderHighlightsInsights(rainList, humList, tempList, hsList, effectiveYear);
+
+  // 8. If expanded panel is currently open, refresh it in-place
+  if (isExpandedPanelOpen) {
+    updateExpandedPanelContent(activeExpandedMetric, dataBundles, state, periodText);
+  }
+}
+
+/**
+ * Helper to render Top 1 Hero and Ranks 2 & 3 in a card
+ */
+function renderSingleHighlightCard(typeKey, list, selectedProv, periodLabel, unit) {
+  const top1El = document.getElementById(`card-${typeKey}-top1`);
+  const subEl = document.getElementById(`card-${typeKey}-subranks`);
+  const periodEl = document.getElementById(`card-${typeKey}-period`);
+
+  if (periodEl) periodEl.textContent = periodLabel;
+  if (!top1El || !subEl || list.length === 0) return;
+
+  const top1 = list[0];
+  const isTop1Selected = selectedProv === top1.province;
+
+  let metaText = '';
+  if (typeKey === 'rain') metaText = `${top1.count} เดือนที่มีข้อมูล`;
+  else if (typeKey === 'hs') metaText = 'ดาวเทียม VIIRS';
+  else metaText = `${top1.stations} สถานี (${top1.count} ข้อมูลเดือน)`;
+
+  const val1Formatted = typeKey === 'hs' ? formatInt(top1.value) : formatNum(top1.value, 1);
+
+  top1El.className = `top-rank-hero ${typeKey}-hero ${isTop1Selected ? 'is-current-filtered' : ''}`;
+  top1El.title = `คลิกเพื่อกรองเฉพาะจังหวัด ${top1.province}`;
+  top1El.onclick = () => window.selectHighlightProvince(top1.province);
+  top1El.innerHTML = `
+    <div class="hero-rank-tag-row">
+      <span class="rank-badge-hero">🥇 อันดับ 1</span>
+      <span class="hero-sub-meta">${metaText}</span>
+    </div>
+    <div class="hero-province-name">${top1.province}</div>
+    <div class="hero-value-row">
+      <span class="hero-value-num">${val1Formatted}</span>
+      <span class="hero-value-unit">${unit}</span>
+    </div>
+  `;
+
+  // Ranks 2 and 3
+  const ranks2and3 = list.slice(1, 3);
+  subEl.innerHTML = ranks2and3.map((d, idx) => {
+    const rankNum = idx + 2;
+    const isSelected = selectedProv === d.province;
+    const badgeCls = rankNum === 2 ? 'rank-2' : 'rank-3';
+    const badgeSymbol = rankNum === 2 ? '🥈' : '🥉';
+    const valFormatted = typeKey === 'hs' ? formatInt(d.value) : formatNum(d.value, 1);
+    return `
+      <div class="sub-rank-item ${isSelected ? 'is-current-filtered' : ''}" 
+           onclick="window.selectHighlightProvince('${d.province}')"
+           title="คลิกเพื่อกรองเฉพาะจังหวัด ${d.province}">
+        <div class="sub-rank-left">
+          <span class="sub-rank-badge ${badgeCls}">${badgeSymbol}</span>
+          <span class="sub-rank-prov">${d.province}</span>
+        </div>
+        <div class="sub-rank-right">
+          <span class="sub-rank-val">${valFormatted}<span class="sub-rank-val-unit">${unit}</span></span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Render Dynamic Insights Strip
+ */
+function renderHighlightsInsights(rainList, humList, tempList, hsList, effectiveYear) {
+  const strip = document.getElementById('highlights-insights-strip');
+  if (!strip) return;
+
+  const topRain = rainList[0];
+  const topHum = humList[0];
+  const topTemp = tempList[0];
+  const topHs = hsList[0];
+
+  const lines = [];
+  if (topRain) {
+    lines.push(`🌧️ <strong>จังหวัดที่มีฝนเฉลี่ยสูงสุด:</strong> <strong>จ.${topRain.province}</strong> (${formatNum(topRain.value, 1)} มม./เดือน จากข้อมูลระดับจังหวัด HII)`);
+  }
+  if (topHum) {
+    lines.push(`💧 <strong>จังหวัดที่มีความชื้นสัมพัทธ์สูงสุด:</strong> <strong>จ.${topHum.province}</strong> (${formatNum(topHum.value, 1)}% จากสถานีตรวจวัด)`);
+  }
+  if (topTemp) {
+    lines.push(`🌡️ <strong>จังหวัดที่มีอุณหภูมิเฉลี่ยสูงสุด:</strong> <strong>จ.${topTemp.province}</strong> (${formatNum(topTemp.value, 1)}°C จากสถานีตรวจวัด)`);
+  }
+  if (topHs) {
+    lines.push(`🔥 <strong>จังหวัดที่ดาวเทียมตรวจพบจุดความร้อนมากที่สุด:</strong> <strong>จ.${topHs.province}</strong> (${formatInt(topHs.value)} จุดดาวเทียม VIIRS)`);
+  }
+
+  // Cross-metric observation (non-causal)
+  const top3Multi = [];
+  STUDY_PROVINCES.forEach(p => {
+    let c = 0;
+    if (rainList.slice(0, 3).some(d => d.province === p)) c++;
+    if (humList.slice(0, 3).some(d => d.province === p)) c++;
+    if (tempList.slice(0, 3).some(d => d.province === p)) c++;
+    if (hsList.slice(0, 3).some(d => d.province === p)) c++;
+    if (c >= 2) top3Multi.push(p);
+  });
+  if (top3Multi.length > 0) {
+    lines.push(`📌 <em>ข้อสังเกตจากข้อมูลจริง:</em> จังหวัด <strong>${top3Multi.join(', ')}</strong> ติดอันดับ Top 3 ในหลายตัวชี้วัดพร้อมกันในช่วงเวลานี้`);
+  }
+
+  strip.innerHTML = lines.map(l => `<p>${l}</p>`).join('');
+}
+
+/**
+ * Open and setup the Expanded 9-Province Rankings Panel
+ */
+function openExpandedHighlightsPanel(initialMetric, dataBundles, state, periodText) {
+  const panel = document.getElementById('highlights-expanded-panel');
+  if (!panel) return;
+
+  isExpandedPanelOpen = true;
+  activeExpandedMetric = initialMetric;
+  panel.style.display = 'flex';
+
+  // Hook close button
+  const closeBtn = document.getElementById('btn-close-expanded-panel');
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      isExpandedPanelOpen = false;
+      panel.style.display = 'none';
+      if (highlightsChartInstance) {
+        highlightsChartInstance.destroy();
+        highlightsChartInstance = null;
+      }
+    };
+  }
+
+  // Hook metric switch tabs inside modal
+  const tabs = panel.querySelectorAll('.expanded-tab-btn');
+  tabs.forEach(tab => {
+    tab.onclick = () => {
+      activeExpandedMetric = tab.dataset.expandedMetric;
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.expandedMetric === activeExpandedMetric));
+      updateExpandedPanelContent(activeExpandedMetric, dataBundles, getState(), periodText);
+    };
+  });
+
+  // Render content
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.expandedMetric === activeExpandedMetric));
+  updateExpandedPanelContent(activeExpandedMetric, dataBundles, state, periodText);
+
+  // Smooth scroll into panel view
+  setTimeout(() => {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 40);
+}
+
+/**
+ * Update the Expanded 9-Province Rankings Chart and Table
+ */
+function updateExpandedPanelContent(metricKey, dataBundles, state, periodText) {
+  const panel = document.getElementById('highlights-expanded-panel');
+  if (!panel || panel.style.display === 'none') return;
+
+  let currentList = [];
+  let metricTitle = '';
+  let unitText = '';
+  let axisLabel = '';
+  let decimals = 1;
+
+  if (metricKey === 'rain') {
+    currentList = dataBundles.rainList;
+    metricTitle = 'อันดับจังหวัดทั้งหมด: ปริมาณน้ำฝน (HII)';
+    unitText = 'มม./เดือน';
+    axisLabel = 'ปริมาณฝนเฉลี่ยรายเดือน (มม./เดือน)';
+    decimals = 1;
+  } else if (metricKey === 'humidity') {
+    currentList = dataBundles.humList;
+    metricTitle = 'อันดับจังหวัดทั้งหมด: ความชื้นสัมพัทธ์ (สถานี)';
+    unitText = '%';
+    axisLabel = 'ความชื้นสัมพัทธ์เฉลี่ย (%)';
+    decimals = 1;
+  } else if (metricKey === 'temp') {
+    currentList = dataBundles.tempList;
+    metricTitle = 'อันดับจังหวัดทั้งหมด: อุณหภูมิเฉลี่ย (สถานี)';
+    unitText = '°C';
+    axisLabel = 'อุณหภูมิเฉลี่ย (°C)';
+    decimals = 1;
+  } else {
+    currentList = dataBundles.hsList;
+    metricTitle = 'อันดับจังหวัดทั้งหมด: จุดความร้อนที่ดาวเทียมตรวจพบ';
+    unitText = 'จุด';
+    axisLabel = 'จำนวนจุดความร้อนดาวเทียม VIIRS (จุด)';
+    decimals = 0;
+  }
+
+  const titleEl = document.getElementById('expanded-panel-title');
+  const subEl = document.getElementById('expanded-panel-sub');
+  const badgeEl = document.getElementById('expanded-metric-badge');
+  const listEl = document.getElementById('expanded-ranking-list');
+
+  if (titleEl) titleEl.textContent = metricTitle;
+  if (subEl) subEl.textContent = `ช่วงเวลา: ${periodText} · เรียงจากมากไปน้อย (คลิกเพื่อเลือกจังหวัด)`;
+  if (badgeEl) badgeEl.textContent = metricKey === 'rain' ? 'ปริมาณน้ำฝน' : metricKey === 'humidity' ? 'ความชื้นสัมพัทธ์' : metricKey === 'temp' ? 'อุณหภูมิเฉลี่ย' : 'จุดความร้อน';
+
+  // Render Horizontal Bar Chart
+  const labels = currentList.map((d, i) => `${i + 1}. ${d.province}`);
+  const dataVals = currentList.map(d => d.value);
+
+  // Bar colors: Gold for #1, Cyan for selected prov, Navy for others
+  const bgColors = currentList.map((d, i) => {
+    if (d.province === state.province) return '#0B96B5';
+    if (i === 0) return '#FFB300';
+    return 'rgba(42, 140, 184, 0.75)';
+  });
+
+  const borderColors = currentList.map((d, i) => {
+    if (d.province === state.province) return '#00838F';
+    if (i === 0) return '#FFA000';
+    return '#1B6488';
+  });
+
+  if (highlightsChartInstance) {
+    highlightsChartInstance.destroy();
+    highlightsChartInstance = null;
+  }
+
+  const canvas = document.getElementById('highlights-all-provinces-chart');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    highlightsChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: dataVals,
+          backgroundColor: bgColors,
+          borderColor: borderColors,
+          borderWidth: 1.5,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(18, 43, 67, 0.96)',
+            titleColor: '#F8FBFF',
+            bodyColor: '#D9F3FF',
+            borderColor: 'rgba(77, 185, 213, 0.65)',
+            borderWidth: 1,
+            callbacks: {
+              label: (context) => {
+                const val = context.parsed.x;
+                const formatted = decimals === 0 ? formatInt(val) : formatNum(val, 1);
+                return ` ${formatted} ${unitText}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: axisLabel, color: '#16324F', font: { weight: '800', size: 12 } },
+            ticks: { color: '#244B6B', font: { weight: '700' } },
+            grid: { color: 'rgba(22, 50, 79, 0.12)' }
+          },
+          y: {
+            ticks: { color: '#16324F', font: { weight: '800' } },
+            grid: { display: false }
+          }
+        },
+        interaction: { mode: 'nearest', intersect: true, axis: 'y' },
+        onHover: (event, _els, chart) => {
+          const target = event?.native?.target;
+          if (target) target.style.cursor = getStrictBarHit(chart, event, true).length > 0 ? 'pointer' : 'default';
+        },
+        onClick: (evt, _elements, chart) => {
+          const elements = getStrictBarHit(chart, evt, true);
+          if (elements && elements.length > 0) {
+            const idx = elements[0].index;
+            const prov = currentList[idx]?.province;
+            if (prov) window.selectHighlightProvince(prov);
+          }
+        }
+      }
+    });
+  }
+
+  // Render Table / List on the right
+  if (listEl) {
+    listEl.innerHTML = currentList.map((d, idx) => {
+      const rankNum = idx + 1;
+      const isSelected = d.province === state.province;
+      const valStr = decimals === 0 ? formatInt(d.value) : formatNum(d.value, 1);
+
+      let noteStr = '';
+      if (metricKey === 'rain') {
+        noteStr = `${d.count} เดือน (ข้อมูลระดับจังหวัด HII)`;
+      } else if (metricKey === 'hs') {
+        noteStr = 'ดาวเทียม VIIRS 375m';
+      } else {
+        noteStr = `${d.stations} สถานี (${d.count} ข้อมูลเดือน)`;
+      }
+
+      return `
+        <div class="expanded-rank-row ${rankNum === 1 ? 'rank-1-row' : ''} ${isSelected ? 'is-current-filtered' : ''}"
+             onclick="window.selectHighlightProvince('${d.province}')"
+             title="คลิกเพื่อเลือกจังหวัด ${d.province}">
+          <div class="expanded-rank-left">
+            <span class="expanded-rank-num">${rankNum === 1 ? '🥇' : rankNum}</span>
+            <div>
+              <span class="expanded-prov-name">${d.province}</span>
+              <div class="expanded-meta-tag">${noteStr}</div>
+            </div>
+          </div>
+          <div class="expanded-rank-right">
+            <span class="expanded-val-txt">${valStr} <small>${unitText}</small></span>
+            <span class="expanded-completeness-note">${isSelected ? '✓ จังหวัดที่เลือก' : 'คลิกเพื่อเลือก'}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 }

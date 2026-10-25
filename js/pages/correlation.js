@@ -23,7 +23,9 @@ import {
   calculateFairHiiYoY,
   calculatePearsonR,
   calculateLaggedPairs,
+  calculateQuartiles,
   formatNum,
+  formatInt,
   formatSignedDelta
 } from '../calculations.js';
 import {
@@ -61,6 +63,9 @@ export function renderCorrelationPage() {
 
   // 5. Lagged Exploratory Analysis (Q8)
   renderLaggedAnalysis(state, filteredRecords, proximityField, proximityLabel);
+
+  // 5.5 Low Rainfall / High Hotspot Explorer (Quadrant Analysis)
+  renderLowRainHighHotspotExplorer(state, filteredRecords, proximityField, proximityLabel);
 
   // 6. Cross-Dataset Rainfall Comparison: HRDI Station vs HII Province (Q3 & Q4)
   renderCrossRainfallSection(state);
@@ -119,13 +124,14 @@ function renderCorrelationHeader(state, records, proximityLabel) {
 function handleScatterPointClick(state, points, elements) {
   if (!elements || elements.length === 0) return;
   const el = elements[0];
-  if (el.datasetIndex !== 0) return; // ignore regression line clicks
-  const pt = points[el.index];
+  const pt = el.element?.$context?.raw || points[el.index];
   if (pt && pt.stationId) {
     const isSame = state.stationId === pt.stationId;
     setState({
       stationId: isSame ? null : pt.stationId,
-      province: pt.province
+      province: pt.province,
+      yearMode: String(pt.year),
+      selectedMonths: [pt.month]
     });
   }
 }
@@ -173,15 +179,48 @@ function renderRainfallVsHotspotsScatter(state, records, proximityField, proximi
     }
   }
 
-  renderScatterChart('q6-rainfall-hotspots-scatter', {
-    datasets: [{
-      label: 'คู่ข้อมูลสถานี-เดือน (คลิกจุดเพื่อเลือกสถานี)',
-      data: dataPoints,
-      backgroundColor: 'rgba(24, 182, 229, 0.70)',
+  // Calculate dynamic thresholds for quadrant explorer
+  const rainStats = calculateQuartiles(dataPoints, 'x');
+  const hsStats = calculateQuartiles(dataPoints, 'y');
+  const isQuartile = state.lowRainThresholdType === 'quartile';
+  const rainCutoff = isQuartile ? (rainStats.q1 ?? 20) : (rainStats.median ?? 45);
+  const hsCutoff = isQuartile ? (hsStats.q3 ?? 10) : (hsStats.median ?? 4);
+
+  const normalPoints = [];
+  const quadrantPoints = [];
+  for (const pt of dataPoints) {
+    if (pt.x <= rainCutoff && pt.y >= hsCutoff) {
+      quadrantPoints.push(pt);
+    } else {
+      normalPoints.push(pt);
+    }
+  }
+
+  const datasets = [
+    {
+      label: 'คู่ข้อมูลสถานี-เดือนทั่วไป',
+      data: normalPoints,
+      backgroundColor: 'rgba(24, 182, 229, 0.65)',
       borderColor: '#0B96B5',
       pointRadius: 5,
       pointHoverRadius: 7
-    }]
+    }
+  ];
+
+  if (quadrantPoints.length > 0) {
+    datasets.push({
+      label: `ฝนต่ำ–จุดความร้อนสูง (${quadrantPoints.length} คู่)`,
+      data: quadrantPoints,
+      backgroundColor: 'rgba(249, 115, 22, 0.88)',
+      borderColor: '#D97706',
+      borderWidth: 1.5,
+      pointRadius: 6.5,
+      pointHoverRadius: 8.5
+    });
+  }
+
+  renderScatterChart('q6-rainfall-hotspots-scatter', {
+    datasets
   }, {
     showTrendline: true,
     onClick: (evt, elements) => handleScatterPointClick(state, dataPoints, elements),
@@ -191,12 +230,14 @@ function renderRainfallVsHotspotsScatter(state, records, proximityField, proximi
           label: (ctx) => {
             const raw = ctx.raw;
             if (!raw.stationName) return ` เส้นแนวโน้มสถิติย้อนหลัง: ${raw.y.toFixed(1)}`;
+            const isQ = raw.x <= rainCutoff && raw.y >= hsCutoff;
             return [
               `สถานี: ${raw.stationName} (จ.${raw.province})`,
               `ช่วงเวลา: ปี ${raw.year} เดือน ${THAI_MONTH_NAMES[raw.month - 1]}`,
               `ปริมาณฝนสถานี: ${raw.x.toFixed(1)} มม.`,
-              `จุดความร้อน (${proximityLabel}): ${raw.y} รายการ`
-            ];
+              `จุดความร้อน (${proximityLabel}): ${raw.y} รายการ`,
+              isQ ? '⚡ เข้าเกณฑ์ฝนต่ำและจุดความร้อนสูง' : ''
+            ].filter(Boolean);
           }
         }
       }
@@ -450,6 +491,172 @@ function renderLaggedAnalysis(state, records, proximityField, proximityLabel) {
 }
 
 /**
+ * Render Low Rainfall / High Hotspot Explorer (Quadrant Analysis)
+ * Dynamically computes median or quartile thresholds from active station-month pairs.
+ * Allows interactive drilldown and table selection.
+ */
+function renderLowRainHighHotspotExplorer(state, records, proximityField, proximityLabel) {
+  const tableWrapper = document.getElementById('low-rain-explorer-table-wrapper');
+  const statSummaryEl = document.getElementById('low-rain-stat-summary');
+  const subEl = document.getElementById('low-rain-explorer-subtitle');
+  if (!tableWrapper) return;
+
+  const validPairs = [];
+  for (const r of records) {
+    if (
+      r.rainfall !== null && r.rainfall !== undefined &&
+      r[proximityField] !== null && r[proximityField] !== undefined
+    ) {
+      validPairs.push({
+        stationId: r.station_id,
+        stationName: r.station_name,
+        province: r.province,
+        district: r.district,
+        tambon: r.tambon,
+        year: r.year,
+        month: r.month,
+        rainfall: Number(r.rainfall),
+        hotspots: Number(r[proximityField])
+      });
+    }
+  }
+
+  const rainStats = calculateQuartiles(validPairs, 'rainfall');
+  const hsStats = calculateQuartiles(validPairs, 'hotspots');
+
+  const isQuartile = state.lowRainThresholdType === 'quartile';
+  const rainThreshold = isQuartile ? (rainStats.q1 ?? 20) : (rainStats.median ?? 45);
+  const hsThreshold = isQuartile ? (hsStats.q3 ?? 10) : (hsStats.median ?? 4);
+
+  // Sync threshold button states
+  const btnMed = document.getElementById('btn-thresh-median');
+  const btnQtl = document.getElementById('btn-thresh-quartile');
+  if (btnMed && btnQtl) {
+    btnMed.classList.toggle('active', !isQuartile);
+    btnQtl.classList.toggle('active', isQuartile);
+  }
+
+  // Filter qualifying station-month pairs
+  const qualifying = validPairs.filter(p => p.rainfall <= rainThreshold && p.hotspots >= hsThreshold);
+  qualifying.sort((a, b) => b.hotspots - a.hotspots || a.rainfall - b.rainfall);
+
+  if (subEl) {
+    const threshLabel = isQuartile
+      ? 'เกณฑ์ควอไทล์เข้มงวด (ฝน ≤ Q1 และจุดความร้อน ≥ Q3)'
+      : 'เกณฑ์มัธยฐาน (ฝน ≤ Median และจุดความร้อน ≥ Median)';
+    subEl.textContent = `แสดงสถานี–เดือนที่เข้า${threshLabel} จากข้อมูลจริง 2022–2023 · คลิกแถวเพื่อกรองและเจาะลึก`;
+  }
+
+  if (statSummaryEl) {
+    const pct = validPairs.length > 0 ? ((qualifying.length / validPairs.length) * 100).toFixed(1) : 0;
+    statSummaryEl.innerHTML = `
+      <div class="low-rain-stat-pill">
+        <span>คู่ข้อมูลทั้งหมด:</span>
+        <strong>N = ${validPairs.length}</strong>
+      </div>
+      <div class="low-rain-stat-pill">
+        <span>เกณฑ์ฝนต่ำ (${isQuartile ? 'Q1' : 'Median'}):</span>
+        <strong>≤ ${formatNum(rainThreshold, 1)} มม.</strong>
+      </div>
+      <div class="low-rain-stat-pill">
+        <span>เกณฑ์จุดความร้อนสูง (${isQuartile ? 'Q3' : 'Median'}):</span>
+        <strong>≥ ${Math.round(hsThreshold)} รายการ</strong>
+      </div>
+      <div class="low-rain-stat-pill pill-highlight">
+        <span>เข้าเกณฑ์ฝนต่ำ–ความร้อนสูง:</span>
+        <strong>${qualifying.length} คู่สถานี-เดือน (${pct}%)</strong>
+      </div>
+    `;
+  }
+
+  if (qualifying.length === 0) {
+    tableWrapper.innerHTML = `
+      <div style="padding: 1.5rem; text-align: center; color: #244B6B;">
+        ไม่พบคู่ข้อมูลที่เข้าเกณฑ์ฝนต่ำและจุดความร้อนสูงพร้อมกันภายใต้ตัวกรองปัจจุบัน (ลองเปลี่ยนปีหรือเลือกพื้นที่กว้างขึ้น)
+      </div>
+    `;
+    return;
+  }
+
+  let rowsHtml = '';
+  qualifying.forEach((item, idx) => {
+    const isSelected = state.province === item.province &&
+                       state.stationId === item.stationId &&
+                       String(item.year) === state.yearMode &&
+                       state.selectedMonths?.length === 1 &&
+                       state.selectedMonths[0] === item.month;
+    const rowClass = isSelected ? 'explorer-table-row active-row' : 'explorer-table-row';
+    const monthName = THAI_MONTH_NAMES[item.month - 1] || `${item.month}`;
+    rowsHtml += `
+      <tr class="${rowClass}" data-prov="${item.province}" data-station="${item.stationId}" data-year="${item.year}" data-month="${item.month}">
+        <td style="font-weight: 700; color: #16324F;">${idx + 1}</td>
+        <td><strong>จ.${item.province}</strong></td>
+        <td>${item.stationName} <small style="color: #64748B;">(อ.${item.district || '-'})</small></td>
+        <td>ปี ${item.year} (${item.year + 543})</td>
+        <td><strong>${monthName}</strong></td>
+        <td style="color: #0B96B5; font-weight: 700;">${formatNum(item.rainfall, 1)} มม.</td>
+        <td style="color: #D97706; font-weight: 800;">${formatInt(item.hotspots)} รายการ</td>
+        <td>
+          <button type="button" class="btn-table-drilldown">
+            ${isSelected ? 'ยกเลิก' : 'สำรวจจุดนี้'}
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  tableWrapper.innerHTML = `
+    <table class="explorer-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>จังหวัด</th>
+          <th>สถานีตรวจวัด</th>
+          <th>ปี</th>
+          <th>เดือน</th>
+          <th>ฝนสถานี</th>
+          <th>จุดความร้อน (${proximityLabel})</th>
+          <th>การจัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+  `;
+
+  // Attach click listener on table rows
+  tableWrapper.querySelectorAll('.explorer-table-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const p = row.getAttribute('data-prov');
+      const stId = row.getAttribute('data-station');
+      const yr = row.getAttribute('data-year');
+      const m = parseInt(row.getAttribute('data-month'), 10);
+      const isSame = state.province === p &&
+                     state.stationId === stId &&
+                     state.yearMode === yr &&
+                     state.selectedMonths?.length === 1 &&
+                     state.selectedMonths[0] === m;
+      if (isSame) {
+        setState({
+          province: null,
+          stationId: null,
+          yearMode: 'compare',
+          selectedMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        });
+      } else {
+        setState({
+          province: p,
+          stationId: stId,
+          yearMode: yr,
+          selectedMonths: [m]
+        });
+      }
+    });
+  });
+}
+
+/**
  * Render Cross-Dataset Rainfall Comparison Section (Q3 & Q4: HRDI Station Rainfall vs HII Provincial Rainfall)
  */
 function renderCrossRainfallSection(state) {
@@ -599,21 +806,23 @@ function renderCrossRainfallSection(state) {
       {
         label: 'ฝนเฉลี่ยสถานีศึกษา HRDI (มม./สถานี-เดือน)',
         data: provData.map(d => d.hrdiMean),
+        provinceKeys: provData.map(d => d.province),
         backgroundColor: '#0B96B5',
         borderRadius: 5
       },
       {
         label: 'ฝนเฉลี่ยระดับจังหวัด HII (มม./จังหวัด-เดือน)',
         data: provData.map(d => d.hiiMean),
+        provinceKeys: provData.map(d => d.province),
         backgroundColor: '#168FD1',
         borderRadius: 5
       }
     ]
   }, {
-    onClick: (evt, elements) => {
+    onClick: (evt, elements, chart) => {
       if (elements && elements.length > 0) {
         const idx = elements[0].index;
-        const clickedProv = provData[idx]?.province;
+        const clickedProv = chart?.data?.datasets?.[0]?.provinceKeys?.[idx] || provData[idx]?.province;
         if (clickedProv) {
           setState({ province: state.province === clickedProv ? null : clickedProv });
         }

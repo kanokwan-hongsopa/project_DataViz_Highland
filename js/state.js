@@ -20,6 +20,9 @@ const initialState = {
   metric: 'temp',               // 'temp' | 'rainfall' | 'humidity' | 'wind_speed' | 'temp_min' | 'temp_max'
   overviewMetricTab: 'temp',    // 'temp' | 'humidity' | 'rainfall' | 'hotspots'
   rainfallSource: 'hrdi',       // 'hrdi' (Station rainfall) | 'hii' (Provincial rainfall)
+  provinceRankOrder: 'desc',    // 'desc' (มากไปน้อย / ค่าสูงสุด) | 'asc' (น้อยไปมาก / ค่าต่ำสุด)
+  districtRankOrder: 'desc',    // 'desc' (มากไปน้อย) | 'asc' (น้อยไปมาก)
+  lowRainThresholdType: 'median', // 'median' | 'quartile' for Low Rain / High Hotspot explorer
   hotspotMetric: 'detections',  // 'detections' | 'frp'
   hotspotElevation: 'all',      // 'all' | 'high' (>500m) | 'low' (<=500m)
   hotspotProject: 'all',        // 'all' | 'in_project' | 'outside' | specific project name
