@@ -12,6 +12,7 @@ const db = {
   hrdiStationMonth: [],
   hiiProvinceMonth: [],
   stationMonthDashboard: [],
+  stationPhotos: null,
   hotspotManifest: null,
   hotspotProvinceMonth: [],
   hotspotDistrictMonth: [],
@@ -43,9 +44,13 @@ async function fetchJson(relativePath) {
  */
 export async function loadCoreData(onProgress = () => {}) {
   onProgress(10, 'กำลังโหลดข้อมูลคอนฟิก แผนที่ และสถานีตรวจวัด...');
-  const [config, stations, manifest, thailandGeo] = await Promise.all([
+  const [config, stations, photos, manifest, thailandGeo] = await Promise.all([
     fetchJson('dashboard_config.json'),
     fetchJson('stations.json'),
+    fetchJson('station_photos.json').catch(err => {
+      console.warn('Could not load station_photos.json:', err);
+      return null;
+    }),
     fetchJson('hotspot_manifest.json'),
     fetchJson('thailand_provinces.geojson').catch(err => {
       console.warn('Could not load local thailand_provinces.geojson:', err);
@@ -54,6 +59,7 @@ export async function loadCoreData(onProgress = () => {}) {
   ]);
   db.config = config;
   db.stations = stations;
+  db.stationPhotos = photos ? photos.stations || photos : {};
   db.hotspotManifest = manifest;
   db.thailandGeoJson = thailandGeo;
 

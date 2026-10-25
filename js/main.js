@@ -494,11 +494,32 @@ function setupOverviewControls() {
   if (btnToggleStations) {
     btnToggleStations.addEventListener('click', () => {
       const cur = getState();
-      if (cur.stationId) {
-        setState({ stationId: null, showMapStations: false });
+      if (cur.stationId || cur.previewStationId) {
+        setState({ stationId: null, previewStationId: null, showMapStations: false });
       } else {
         setState({ showMapStations: !cur.showMapStations });
       }
+    });
+  }
+
+  // Station Charts Metric Selector Pills (temp | humidity | rainfall | wind_speed)
+  document.querySelectorAll('.station-chart-metric-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = btn.getAttribute('data-station-metric');
+      if (m) {
+        setState({ stationChartMetric: m });
+      }
+    });
+  });
+
+  // Expandable 12-Month Station Records Table in Section 2B
+  const btnToggleStRecords = document.getElementById('btn-toggle-station-monthly-records');
+  const stRecordsBody = document.getElementById('station-monthly-records-body');
+  if (btnToggleStRecords && stRecordsBody) {
+    btnToggleStRecords.addEventListener('click', () => {
+      const isOpen = stRecordsBody.classList.toggle('open');
+      btnToggleStRecords.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      btnToggleStRecords.innerHTML = `<span>${isOpen ? 'ซ่อนตารางข้อมูลรายเดือนของสถานีนี้' : 'ดูตารางข้อมูลรายเดือนของสถานีนี้'}</span>`;
     });
   }
 
@@ -661,9 +682,9 @@ function updateFilterControls(state) {
     const activeStations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
     const activeRecords = filterStationMonthRecords(db.hrdiStationMonth, state);
     if (state.weatherSource === 'all') {
-      wsBadge.textContent = `สถานีภูมิอากาศ: ${activeStations.length} แห่ง (${activeRecords.length} ระเบียน)`;
+      wsBadge.textContent = `สถานีภูมิอากาศ: ${activeStations.length} แห่ง (${activeRecords.length} แถวข้อมูล)`;
     } else {
-      wsBadge.textContent = `กรองแหล่งสถานี: ${state.weatherSource} (${activeStations.length} สถานี, ${activeRecords.length} ระเบียน · ไม่กระทบค่า HII/Hotspot)`;
+      wsBadge.textContent = `กรองแหล่งสถานี: ${state.weatherSource} (${activeStations.length} สถานี, ${activeRecords.length} แถวข้อมูล · ไม่กระทบค่า HII/Hotspot)`;
     }
   }
 
@@ -839,17 +860,74 @@ function setupGlobalWindowHelpers() {
   window.selectStation = (stationId, province, district = null, tambon = null) => {
     const current = getState();
     if (current.stationId === stationId) {
-      setState({ stationId: null });
+      setState({ stationId: null, previewStationId: null });
     } else {
-      const updates = { stationId, province };
+      const updates = { stationId, previewStationId: stationId, province, showMapStations: true };
       if (district) updates.district = district;
       if (tambon) updates.tambon = tambon;
       setState(updates);
     }
   };
 
+  // Step 1: Click station marker / quick item -> Preview Station Detail without applying global filter yet
+  window.previewStation = (stationId) => {
+    setState({
+      previewStationId: stationId,
+      showMapStations: true
+    });
+  };
+
+  // Step 2: Click "ดูข้อมูลสถานีนี้" -> Apply station to Global State & Cross-filtering
+  window.applyStationFilter = (stationId) => {
+    const db = getDb();
+    const cur = getState();
+    const targetId = stationId || cur.previewStationId || cur.stationId;
+    if (!targetId) return;
+    const st = db.stations.find(s => s.station_id === targetId);
+    if (!st) return;
+
+    const updates = {
+      stationId: st.station_id,
+      previewStationId: st.station_id,
+      province: st.province,
+      district: st.district || null,
+      tambon: st.tambon || null,
+      showMapStations: true
+    };
+    if (cur.weatherSource !== 'all' && cur.weatherSource !== st.source_type) {
+      updates.weatherSource = st.source_type;
+    }
+    setState(updates);
+
+    // Smoothly scroll to Station Charts section when already applied or on user request
+    const chartSec = document.getElementById('station-charts-section');
+    if (chartSec && cur.stationId === st.station_id) {
+      chartSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Step 3: Click "ยกเลิกการเลือกสถานี" -> Clear only station filter & preview, keep year/month/province
+  window.clearStationFilter = () => {
+    setState({
+      stationId: null,
+      previewStationId: null
+    });
+  };
+
+  window.closeStationDetailPanel = () => {
+    setState({
+      stationId: null,
+      previewStationId: null
+    });
+  };
+
+  window.toggleMapStationsLayer = () => {
+    const cur = getState();
+    setState({ showMapStations: !cur.showMapStations });
+  };
+
   window.clearProvinceSelection = () => {
-    setState({ province: null, district: null, tambon: null, stationId: null });
+    setState({ province: null, district: null, tambon: null, stationId: null, previewStationId: null });
   };
 
   window.removeFilterChip = (index) => {

@@ -1,6 +1,6 @@
 /**
  * maps.js — Clean Interactive GeoJSON Choropleth Map (Zero External Tile API Keys)
- * Supports 77 Thai Provinces Context + 9 Study Provinces Choropleth (2022 | 2023 | Compare Diff)
+ * Supports In-Place Smooth Updates for 77 Thai Provinces + 9 Study Provinces & 50 Weather Stations
  * Highland Climate & Hotspot Dashboard (2022–2023)
  */
 
@@ -11,6 +11,7 @@ import {
   getHotspotByProvinceBreakdown
 } from './filters.js';
 import { calculateMean, formatNum, formatInt, formatSignedDelta } from './calculations.js';
+import { prefersReducedMotion } from './animations.js';
 
 export const THAILAND_CENTER = [15.2, 100.5];
 export const THAILAND_ZOOM = 6;
@@ -27,6 +28,19 @@ export const STUDY_PROVINCES_EN = [
   'kanchanaburi', 'kamphaeng phet', 'tak', 'nan', 'phitsanulok',
   'chiang rai', 'chiang mai', 'phetchabun', 'mae hong son'
 ];
+
+// Visual label centroids for the 9 study provinces (matches reference map layout)
+const PROVINCE_LABEL_COORDS = {
+  'เชียงราย': [19.92, 99.88],
+  'เชียงใหม่': [18.82, 98.92],
+  'แม่ฮ่องสอน': [18.68, 97.92],
+  'น่าน': [18.82, 100.82],
+  'ตาก': [16.65, 98.85],
+  'พิษณุโลก': [16.88, 100.38],
+  'กำแพงเพชร': [16.22, 99.52],
+  'เพชรบูรณ์': [16.15, 101.18],
+  'กาญจนบุรี': [14.58, 99.18]
+};
 
 const mapRegistry = new Map();
 
@@ -78,12 +92,9 @@ export function initLeafletMap(containerId, options = {}) {
   const container = document.getElementById(containerId);
   if (!container) return null;
 
+  // Reuse existing map instance if already initialized on this container
   if (container._leaflet_id && container._leaflet_map) {
-    try {
-      container._leaflet_map.remove();
-    } catch (e) {
-      console.warn('Error removing map instance:', e);
-    }
+    return container._leaflet_map;
   }
 
   const defaultCenter = options.center || HIGHLAND_CENTER;
@@ -96,7 +107,10 @@ export function initLeafletMap(containerId, options = {}) {
     maxZoom: 13,
     zoomControl: false,
     attributionControl: false,
-     preferCanvas: false,
+    preferCanvas: false,
+    zoomAnimation: true,
+    fadeAnimation: true,
+    markerZoomAnimation: true,
     ...options
   });
 
@@ -107,7 +121,7 @@ export function initLeafletMap(containerId, options = {}) {
     zoomOutTitle: 'ย่อแผนที่ (Zoom Out)'
   }).addTo(map);
 
-  // 2. Dedicated Reset View Control (restores map zoom/center without clearing filters)
+  // 2. Dedicated Reset View Control (restores map zoom/center smoothly without clearing filters)
   const ResetViewControl = L.Control.extend({
     options: { position: 'topleft' },
     onAdd: function () {
@@ -125,12 +139,47 @@ export function initLeafletMap(containerId, options = {}) {
       L.DomEvent.disableClickPropagation(btn);
       L.DomEvent.on(btn, 'click', (e) => {
         L.DomEvent.preventDefault(e);
-        map.setView(defaultCenter, defaultZoom, { animate: true });
+        if (prefersReducedMotion()) {
+          map.setView(defaultCenter, defaultZoom, { animate: false });
+        } else {
+          map.flyTo(defaultCenter, defaultZoom, { duration: 0.65 });
+        }
       });
       return btn;
     }
   });
   map.addControl(new ResetViewControl());
+
+  // 3. Dedicated panes so province labels and station markers layer cleanly
+  if (!map.getPane('provinceLabelPane')) {
+    const labelPane = map.createPane('provinceLabelPane');
+    labelPane.style.zIndex = '610';
+    labelPane.style.pointerEvents = 'none';
+  }
+  if (!map.getPane('stationPane')) {
+    const stationPane = map.createPane('stationPane');
+    stationPane.style.zIndex = '650';
+  }
+  if (!map.getPane('stationCalloutPane')) {
+    const calloutPane = map.createPane('stationCalloutPane');
+    calloutPane.style.zIndex = '680';
+    calloutPane.style.pointerEvents = 'none';
+  }
+
+  // 4. Add Reference-Style Distance Scale Bar (bottom-right: 0 50 100 200 กม.)
+  if (!container.querySelector('.map-scale-bar-box')) {
+    const scaleBox = document.createElement('div');
+    scaleBox.className = 'map-scale-bar-box';
+    scaleBox.innerHTML = `
+      <div class="scale-numbers"><span>0</span><span>50</span><span>100</span><span>200 กม.</span></div>
+      <div class="scale-segments">
+        <span class="seg dark"></span>
+        <span class="seg light"></span>
+        <span class="seg dark wide"></span>
+      </div>
+    `;
+    container.appendChild(scaleBox);
+  }
 
   container._leaflet_map = map;
   mapRegistry.set(containerId, map);
@@ -145,75 +194,79 @@ export function getChoroplethScaleConfig(metricType, isCompareMode = false) {
   if (isCompareMode) {
     if (metricType === 'temp') {
       return {
-        title: 'ผลต่างอุณหภูมิ (ปี 2023 เทียบกับ 2022)',
+        title: 'ผลต่างอุณหภูมิเฉลี่ย (°C)',
+        subtitle: 'ปี 2023 เทียบกับ 2022',
         unit: '°C',
         bins: [
           { label: 'ลดลง (< −0.2 °C)', color: '#0EA5E9' },
-          { label: 'ใกล้เคียงเดิม (±0.2 °C)', color: '#94A3B8' },
-          { label: 'เพิ่มขึ้นเล็กน้อย (+0.2 ถึง +0.8 °C)', color: '#FB923C' },
-          { label: 'เพิ่มขึ้นชัดเจน (> +0.8 °C)', color: '#F43F5E' }
+          { label: 'ใกล้เคียงเดิม (±0.2 °C)', color: '#38BDF8' },
+          { label: 'เพิ่มขึ้นเล็กน้อย (+0.2 ถึง +0.6 °C)', color: '#F59E0B' },
+          { label: 'เพิ่มขึ้นชัดเจน (> +0.6 °C)', color: '#F97316' }
         ],
         getColor(diff) {
-          if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#CBD5E1';
-          if (diff > 0.8) return '#F43F5E';
-          if (diff > 0.2) return '#FB923C';
+          if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#64748B';
+          if (diff > 0.6) return '#F97316';
+          if (diff > 0.2) return '#F59E0B';
           if (diff < -0.2) return '#0EA5E9';
-          return '#94A3B8';
+          return '#38BDF8';
         }
       };
     }
     if (metricType === 'humidity') {
       return {
-        title: 'ผลต่างความชื้นสัมพัทธ์ (ปี 2023 เทียบกับ 2022)',
+        title: 'ผลต่างความชื้นสัมพัทธ์ (%)',
+        subtitle: 'ปี 2023 เทียบกับ 2022',
         unit: '%',
         bins: [
           { label: 'แห้งลง (< −2.0 %)', color: '#F97316' },
-          { label: 'ใกล้เคียงเดิม (±2.0 %)', color: '#94A3B8' },
-          { label: 'ชื้นขึ้น (> +2.0 %)', color: '#0EA5E9' }
+          { label: 'ใกล้เคียงเดิม (±2.0 %)', color: '#38BDF8' },
+          { label: 'ชื้นขึ้น (> +2.0 %)', color: '#0284C7' }
         ],
         getColor(diff) {
-          if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#CBD5E1';
-          if (diff > 2.0) return '#0EA5E9';
+          if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#64748B';
+          if (diff > 2.0) return '#0284C7';
           if (diff < -2.0) return '#F97316';
-          return '#94A3B8';
+          return '#38BDF8';
         }
       };
     }
     if (metricType === 'rainfall') {
       return {
-        title: 'ผลต่างปริมาณฝนเฉลี่ย (ปี 2023 เทียบกับ 2022)',
+        title: 'ผลต่างปริมาณฝนเฉลี่ย (มม.)',
+        subtitle: 'ปี 2023 เทียบกับ 2022',
         unit: 'มม.',
         bins: [
           { label: 'ฝนลดลงมาก (< −30 มม.)', color: '#F97316' },
-          { label: 'ฝนลดลง (−5 ถึง −30 มม.)', color: '#FBBF24' },
-          { label: 'ใกล้เคียงเดิม (±5 มม.)', color: '#94A3B8' },
+          { label: 'ฝนลดลง (−5 ถึง −30 มม.)', color: '#F59E0B' },
+          { label: 'ใกล้เคียงเดิม (±5 มม.)', color: '#38BDF8' },
           { label: 'ฝนเพิ่มขึ้น (> +5 มม.)', color: '#0284C7' }
         ],
         getColor(diff) {
-          if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#CBD5E1';
+          if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#64748B';
           if (diff > 5) return '#0284C7';
           if (diff < -30) return '#F97316';
-          if (diff < -5) return '#FBBF24';
-          return '#94A3B8';
+          if (diff < -5) return '#F59E0B';
+          return '#38BDF8';
         }
       };
     }
     // Compare mode: hotspots
     return {
-      title: 'ผลต่างจุดความร้อน (ปี 2023 เทียบกับ 2022)',
+      title: 'ผลต่างจุดความร้อน (จุด)',
+      subtitle: 'ปี 2023 เทียบกับ 2022',
       unit: 'จุด',
       bins: [
         { label: 'ลดลง (< −50 จุด)', color: '#10B981' },
-        { label: 'ใกล้เคียงเดิม (±50 จุด)', color: '#94A3B8' },
-        { label: 'เพิ่มขึ้น (+51 ถึง +3,000 จุด)', color: '#FB923C' },
-        { label: 'เพิ่มขึ้นมาก (> +3,000 จุด)', color: '#E11D48' }
+        { label: 'ใกล้เคียงเดิม (±50 จุด)', color: '#38BDF8' },
+        { label: 'เพิ่มขึ้น (+51 ถึง +3,000 จุด)', color: '#F59E0B' },
+        { label: 'เพิ่มขึ้นมาก (> +3,000 จุด)', color: '#EF4444' }
       ],
       getColor(diff) {
-        if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#CBD5E1';
-        if (diff > 3000) return '#E11D48';
-        if (diff > 50) return '#FB923C';
+        if (diff === null || diff === undefined || Number.isNaN(Number(diff))) return '#64748B';
+        if (diff > 3000) return '#EF4444';
+        if (diff > 50) return '#F59E0B';
         if (diff < -50) return '#10B981';
-        return '#94A3B8';
+        return '#38BDF8';
       }
     };
   }
@@ -222,17 +275,18 @@ export function getChoroplethScaleConfig(metricType, isCompareMode = false) {
   if (metricType === 'temp') {
     return {
       title: 'อุณหภูมิเฉลี่ย (°C)',
+      subtitle: 'ค่าตรวจวัดรายจังหวัด',
       unit: '°C',
       bins: [
         { max: 22, label: '≤ 22 °C', color: '#38BDF8' },
         { max: 24, label: '22–24 °C', color: '#2DD4BF' },
-        { max: 26, label: '24–26 °C', color: '#FBBF24' },
-        { max: Infinity, label: '> 26 °C', color: '#F43F5E' }
+        { max: 26, label: '24–26 °C', color: '#F59E0B' },
+        { max: Infinity, label: '> 26 °C', color: '#EF4444' }
       ],
       getColor(val) {
-        if (val === null || val === undefined || Number.isNaN(Number(val))) return '#CBD5E1';
-        if (val > 26) return '#F43F5E';
-        if (val > 24) return '#FBBF24';
+        if (val === null || val === undefined || Number.isNaN(Number(val))) return '#64748B';
+        if (val > 26) return '#EF4444';
+        if (val > 24) return '#F59E0B';
         if (val > 22) return '#2DD4BF';
         return '#38BDF8';
       }
@@ -241,17 +295,18 @@ export function getChoroplethScaleConfig(metricType, isCompareMode = false) {
   if (metricType === 'humidity') {
     return {
       title: 'ความชื้นสัมพัทธ์ (%)',
+      subtitle: 'ค่าตรวจวัดรายจังหวัด',
       unit: '%',
       bins: [
         { max: 65, label: '≤ 65 %', color: '#99F6E4' },
         { max: 75, label: '65–75 %', color: '#2DD4BF' },
-        { max: 82, label: '75–82 %', color: '#0B96B5' },
-        { max: Infinity, label: '> 82 %', color: '#1D4ED8' }
+        { max: 82, label: '75–82 %', color: '#0EA5E9' },
+        { max: Infinity, label: '> 82 %', color: '#0284C7' }
       ],
       getColor(val) {
-        if (val === null || val === undefined || Number.isNaN(Number(val))) return '#CBD5E1';
-        if (val > 82) return '#1D4ED8';
-        if (val > 75) return '#0B96B5';
+        if (val === null || val === undefined || Number.isNaN(Number(val))) return '#64748B';
+        if (val > 82) return '#0284C7';
+        if (val > 75) return '#0EA5E9';
         if (val > 65) return '#2DD4BF';
         return '#99F6E4';
       }
@@ -260,16 +315,17 @@ export function getChoroplethScaleConfig(metricType, isCompareMode = false) {
   if (metricType === 'rainfall') {
     return {
       title: 'ปริมาณฝนเฉลี่ย (มม./เดือน)',
+      subtitle: 'ค่าตรวจวัดรายจังหวัด',
       unit: 'มม.',
       bins: [
         { max: 50, label: '≤ 50 มม.', color: '#BAE6FD' },
         { max: 110, label: '50–110 มม.', color: '#38BDF8' },
         { max: 170, label: '110–170 มม.', color: '#0284C7' },
-        { max: Infinity, label: '> 170 มม.', color: '#1E3A8A' }
+        { max: Infinity, label: '> 170 มม.', color: '#1D4ED8' }
       ],
       getColor(val) {
-        if (val === null || val === undefined || Number.isNaN(Number(val))) return '#CBD5E1';
-        if (val > 170) return '#1E3A8A';
+        if (val === null || diffIsNaN(val)) return '#64748B';
+        if (val > 170) return '#1D4ED8';
         if (val > 110) return '#0284C7';
         if (val > 50) return '#38BDF8';
         return '#BAE6FD';
@@ -278,25 +334,30 @@ export function getChoroplethScaleConfig(metricType, isCompareMode = false) {
   }
   return {
     title: 'จุดความร้อนสะสม (จุด)',
+    subtitle: 'ค่าตรวจพบรายจังหวัด',
     unit: 'จุด',
     bins: [
       { max: 500, label: '≤ 500 จุด', color: '#FDE047' },
       { max: 2000, label: '501–2,000', color: '#FBBF24' },
-      { max: 5000, label: '2,001–5,000', color: '#FB923C' },
-      { max: Infinity, label: '> 5,000 จุด', color: '#E11D48' }
+      { max: 5000, label: '2,001–5,000', color: '#F97316' },
+      { max: Infinity, label: '> 5,000 จุด', color: '#EF4444' }
     ],
     getColor(val) {
-      if (val === null || val === undefined || Number.isNaN(Number(val))) return '#CBD5E1';
-      if (val > 5000) return '#E11D48';
-      if (val > 2000) return '#FB923C';
+      if (val === null || val === undefined || Number.isNaN(Number(val))) return '#64748B';
+      if (val > 5000) return '#EF4444';
+      if (val > 2000) return '#F97316';
       if (val > 500) return '#FBBF24';
       return '#FDE047';
     }
   };
 }
 
+function diffIsNaN(v) {
+  return v === undefined || Number.isNaN(Number(v));
+}
+
 /**
- * Update or render compact Choropleth Legend inside a map container
+ * Update or render vertical Frosted Glass Choropleth Legend inside a map container (matches reference image)
  */
 export function renderMapChoroplethLegend(containerId, metricType, provStatsMap, isCompareMode = false) {
   const container = document.getElementById(containerId);
@@ -326,23 +387,24 @@ export function renderMapChoroplethLegend(containerId, metricType, provStatsMap,
   const decimals = metricType === 'hotspots' ? 0 : 1;
   const rangeText = Number.isFinite(minVal) && Number.isFinite(maxVal)
     ? (isCompareMode
-        ? `ช่วงผลต่างจริง: ${formatSignedDelta(minVal, decimals)} ถึง ${formatSignedDelta(maxVal, decimals)} ${scale.unit}`
-        : `ช่วงค่าจริง: ${ decimals === 0 ? formatInt(minVal) : formatNum(minVal, 1) } – ${ decimals === 0 ? formatInt(maxVal) : formatNum(maxVal, 1) } ${scale.unit}`)
+        ? `${formatSignedDelta(minVal, decimals)} ถึง ${formatSignedDelta(maxVal, decimals)} ${scale.unit}`
+        : `${decimals === 0 ? formatInt(minVal) : formatNum(minVal, 1)} – ${decimals === 0 ? formatInt(maxVal) : formatNum(maxVal, 1)} ${scale.unit}`)
     : 'ไม่มีข้อมูลในช่วงที่เลือก';
 
   legendEl.innerHTML = `
-    <div class="legend-title">${scale.title} <span class="legend-range-inline">(${rangeText})</span></div>
-    <div class="legend-scale-row">
+    <div class="legend-title">${scale.title}</div>
+    <div class="legend-subtitle">${scale.subtitle} <span class="legend-range-inline">(${rangeText})</span></div>
+    <div class="legend-scale-list">
       ${scale.bins.map(b => `
-        <span class="legend-step">
+        <div class="legend-step">
           <span class="legend-swatch" style="background:${b.color};"></span>
           <span>${b.label}</span>
-        </span>
+        </div>
       `).join('')}
-      <span class="legend-step">
-        <span class="legend-swatch" style="background:#CBD5E1;"></span>
+      <div class="legend-step">
+        <span class="legend-swatch" style="background:rgba(100, 116, 139, 0.65);"></span>
         <span>นอกพื้นที่ศึกษา (68 จ.)</span>
-      </span>
+      </div>
     </div>
   `;
 }
@@ -354,7 +416,6 @@ export function computeProvinceMapStats(state, metric = 'temp') {
   const db = getDb();
   const provStats = new Map();
 
-  // For fair comparison in compare mode on HRDI metrics, only use months <= 9 that exist in both years
   const fairCompareMonths = state.selectedMonths.filter(m => m <= 9);
   const effectiveCompareMonths = fairCompareMonths.length > 0 ? fairCompareMonths : state.selectedMonths;
 
@@ -415,7 +476,6 @@ export function computeProvinceMapStats(state, metric = 'temp') {
     }
 
     const diffVal = (val2022 !== null && val2023 !== null) ? (val2023 - val2022) : null;
-    // Percentage change: only valid for ratio-scale metrics (rainfall, hotspots) where base > 0
     let pctChange = null;
     let pctNote = '';
     if (metric === 'temp') {
@@ -466,7 +526,71 @@ export function computeProvinceMapStats(state, metric = 'temp') {
 }
 
 /**
- * Render the 77-province Thailand GeoJSON Choropleth Map (No API Key Tiles, Clean Hover & Click)
+ * Helper to compute style and tooltip for a single province feature
+ */
+function buildProvinceStyle(feature, state, provStats, scaleConfig, isCompareMode) {
+  const isStudy = isStudyProvince(feature);
+  const provName = getFeatureProvinceName(feature);
+  const isSelected = state.province === provName;
+
+  if (!isStudy) {
+    return {
+      fillColor: '#0A2033',
+      fillOpacity: 0.72,
+      color: 'rgba(65, 193, 223, 0.20)',
+      weight: 0.85,
+      className: 'province-non-study'
+    };
+  }
+
+  const stat = provStats.get(provName);
+  const colorVal = isCompareMode ? stat?.diffVal : stat?.displayVal;
+  const baseColor = scaleConfig.getColor(colorVal);
+  const dimmedByOtherSelection = state.province && !isSelected;
+
+  return {
+    fillColor: baseColor,
+    fillOpacity: isSelected ? 0.94 : (dimmedByOtherSelection ? 0.40 : 0.86),
+    color: isSelected ? '#FFFFFF' : 'rgba(37, 217, 245, 0.75)',
+    weight: isSelected ? 3.0 : 1.5,
+    className: 'province-study-interactive'
+  };
+}
+
+function buildProvinceTooltipHtml(provName, stat, state, metric, isCompareMode) {
+  const isSelected = state.province === provName;
+  const decimals = metric === 'hotspots' ? 0 : 1;
+  const fmtVal = (v) => v === null || v === undefined ? 'N/A' : (decimals === 0 ? formatInt(v) : formatNum(v, 1));
+
+  if (isCompareMode) {
+    const diffStr = stat?.diffVal !== null && stat?.diffVal !== undefined
+      ? `${formatSignedDelta(stat.diffVal, decimals)} ${stat.unit}`
+      : 'N/A';
+    const pctStr = stat?.pctChange !== null && stat?.pctChange !== undefined
+      ? ` (${formatSignedDelta(stat.pctChange, 1, '%')})`
+      : (stat?.pctNote ? `<br><span style="font-size:0.7rem;color:#64748B;">* ${stat.pctNote}</span>` : '');
+
+    return `
+      <div class="clean-map-tooltip">
+        <div class="tt-title">จ.${provName} <span class="tt-hint">${isSelected ? '(คลิกซ้ำเพื่อยกเลิก)' : '(คลิกเพื่อดูเจาะลึก)'}</span></div>
+        <div class="tt-row"><span>ปี 2022:</span> <strong>${fmtVal(stat?.val2022)} ${stat?.unit || ''}</strong></div>
+        <div class="tt-row"><span>ปี 2023:</span> <strong>${fmtVal(stat?.val2023)} ${stat?.unit || ''}</strong></div>
+        <div class="tt-row tt-diff"><span>ผลต่าง:</span> <strong>${diffStr}${pctStr}</strong></div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="clean-map-tooltip">
+      <div class="tt-title">จ.${provName} <span class="tt-hint">${isSelected ? '(คลิกซ้ำเพื่อยกเลิก)' : '(คลิกเพื่อดูเจาะลึก)'}</span></div>
+      <div class="tt-row"><span>ค่าปี ${state.yearMode}:</span> <strong>${fmtVal(stat?.displayVal)} ${stat?.unit || ''}</strong></div>
+      <div class="tt-row"><span>สถานีตรวจวัด:</span> <strong>${stat?.stationsCount || 0} สถานี</strong></div>
+    </div>
+  `;
+}
+
+/**
+ * Render OR Smoothly Update in-place the 77-province Thailand GeoJSON Choropleth Map + 9 Province Name Pills
  */
 export function renderThailandProvinceMap(map, options = {}) {
   const geojson = getThailandGeoJson();
@@ -482,37 +606,53 @@ export function renderThailandProvinceMap(map, options = {}) {
   const isCompareMode = state.yearMode === 'compare';
   const provStats = computeProvinceMapStats(state, metric);
   const scaleConfig = getChoroplethScaleConfig(metric, isCompareMode);
-  const group = L.layerGroup();
 
-  const geoLayer = L.geoJSON(geojson, {
-    style: (feature) => {
+  // Store latest callback & state on map so in-place handlers always use current state
+  map._latestProvinceSelectCallback = onSelectProvince;
+
+  // If the GeoJSON layer already exists on this map, update styles & tooltips in-place (NO layer recreation!)
+  if (map._provinceGeoLayer && map._provinceLayerGroup && map.hasLayer(map._provinceLayerGroup)) {
+    map._provinceGeoLayer.eachLayer((layer) => {
+      const feature = layer.feature;
       const isStudy = isStudyProvince(feature);
       const provName = getFeatureProvinceName(feature);
-      const isSelected = state.province === provName;
+      const nextStyle = buildProvinceStyle(feature, state, provStats, scaleConfig, isCompareMode);
+      layer.setStyle(nextStyle);
 
-      if (!isStudy) {
-        return {
-          fillColor: '#CBD5E1',
-          fillOpacity: 0.55,
-          color: '#94A3B8',
-          weight: 0.7,
-          className: 'province-non-study'
-        };
+      if (isStudy) {
+        const stat = provStats.get(provName);
+        const tooltipHtml = buildProvinceTooltipHtml(provName, stat, state, metric, isCompareMode);
+        if (layer.getTooltip()) {
+          layer.setTooltipContent(tooltipHtml);
+        }
       }
+    });
 
-      const stat = provStats.get(provName);
-      const colorVal = isCompareMode ? stat?.diffVal : stat?.displayVal;
-      const baseColor = scaleConfig.getColor(colorVal);
-      const dimmedByOtherSelection = state.province && !isSelected;
+    // Update active state on province pill labels
+    if (map._provinceLabelMarkers) {
+      for (const [pName, lblMarker] of map._provinceLabelMarkers.entries()) {
+        const el = lblMarker.getElement();
+        if (el) {
+          const pill = el.querySelector('.map-province-label-pill');
+          if (pill) {
+            pill.classList.toggle('is-selected', state.province === pName);
+          }
+        }
+      }
+    }
 
-      return {
-        fillColor: baseColor,
-        fillOpacity: isSelected ? 0.94 : (dimmedByOtherSelection ? 0.42 : 0.84),
-        color: isSelected ? '#081B2D' : '#FFFFFF',
-        weight: isSelected ? 2.8 : 1.4,
-        className: 'province-study-interactive'
-      };
-    },
+    map._provinceGeoUpdateCount = (map._provinceGeoUpdateCount || 0) + 1;
+
+    if (legendContainerId) {
+      renderMapChoroplethLegend(legendContainerId, metric, provStats, isCompareMode);
+    }
+    return map._provinceLayerGroup;
+  }
+
+  // Initial creation of the GeoJSON layer + Province Name Pill Labels
+  const group = L.layerGroup();
+  const geoLayer = L.geoJSON(geojson, {
+    style: (feature) => buildProvinceStyle(feature, state, provStats, scaleConfig, isCompareMode),
     onEachFeature: (feature, layer) => {
       const isStudy = isStudyProvince(feature);
       const provName = getFeatureProvinceName(feature);
@@ -523,36 +663,7 @@ export function renderThailandProvinceMap(map, options = {}) {
       }
 
       const stat = provStats.get(provName);
-      const isSelected = state.province === provName;
-      const decimals = metric === 'hotspots' ? 0 : 1;
-      const fmtVal = (v) => v === null || v === undefined ? 'N/A' : (decimals === 0 ? formatInt(v) : formatNum(v, 1));
-
-      let tooltipHtml = '';
-      if (isCompareMode) {
-        const diffStr = stat?.diffVal !== null && stat?.diffVal !== undefined
-          ? `${formatSignedDelta(stat.diffVal, decimals)} ${stat.unit}`
-          : 'N/A';
-        const pctStr = stat?.pctChange !== null && stat?.pctChange !== undefined
-          ? ` (${formatSignedDelta(stat.pctChange, 1, '%')})`
-          : (stat?.pctNote ? `<br><span style="font-size:0.7rem;color:#64748B;">* ${stat.pctNote}</span>` : '');
-
-        tooltipHtml = `
-          <div class="clean-map-tooltip">
-            <div class="tt-title">จ.${provName} <span class="tt-hint">${isSelected ? '(คลิกซ้ำเพื่อยกเลิก)' : '(คลิกเพื่อดูเจาะลึก)'}</span></div>
-            <div class="tt-row"><span>ปี 2022:</span> <strong>${fmtVal(stat?.val2022)} ${stat?.unit || ''}</strong></div>
-            <div class="tt-row"><span>ปี 2023:</span> <strong>${fmtVal(stat?.val2023)} ${stat?.unit || ''}</strong></div>
-            <div class="tt-row tt-diff"><span>ผลต่าง:</span> <strong>${diffStr}${pctStr}</strong></div>
-          </div>
-        `;
-      } else {
-        tooltipHtml = `
-          <div class="clean-map-tooltip">
-            <div class="tt-title">จ.${provName} <span class="tt-hint">${isSelected ? '(คลิกซ้ำเพื่อยกเลิก)' : '(คลิกเพื่อดูเจาะลึก)'}</span></div>
-            <div class="tt-row"><span>ค่าปี ${state.yearMode}:</span> <strong>${fmtVal(stat?.displayVal)} ${stat?.unit || ''}</strong></div>
-            <div class="tt-row"><span>สถานีตรวจวัด:</span> <strong>${stat?.stationsCount || 0} สถานี</strong></div>
-          </div>
-        `;
-      }
+      const tooltipHtml = buildProvinceTooltipHtml(provName, stat, state, metric, isCompareMode);
 
       layer.bindTooltip(tooltipHtml, {
         sticky: true,
@@ -563,20 +674,27 @@ export function renderThailandProvinceMap(map, options = {}) {
         mouseover: (e) => {
           const l = e.target;
           l.setStyle({
-            fillOpacity: 0.95,
-            weight: 2.6,
-            color: '#081B2D'
+            fillOpacity: 0.96,
+            weight: 2.8,
+            color: '#FFFFFF'
           });
           if (l.bringToFront) l.bringToFront();
         },
         mouseout: (e) => {
-          geoLayer.resetStyle(e.target);
+          const curState = getState();
+          const curMetric = curState.swipeMetric || curState.overviewMetricTab || metric;
+          const curCompare = curState.yearMode === 'compare';
+          const curStats = computeProvinceMapStats(curState, curMetric);
+          const curScale = getChoroplethScaleConfig(curMetric, curCompare);
+          e.target.setStyle(buildProvinceStyle(feature, curState, curStats, curScale, curCompare));
         },
         click: (e) => {
           L.DomEvent.stopPropagation(e);
-          const nextProv = state.province === provName ? null : provName;
-          if (typeof onSelectProvince === 'function') {
-            onSelectProvince(nextProv);
+          const curState = getState();
+          const nextProv = curState.province === provName ? null : provName;
+          const cb = map._latestProvinceSelectCallback;
+          if (typeof cb === 'function') {
+            cb(nextProv);
           } else {
             setState({ province: nextProv });
           }
@@ -586,7 +704,34 @@ export function renderThailandProvinceMap(map, options = {}) {
   });
 
   group.addLayer(geoLayer);
+
+  // Add floating Province Name Pill Labels for the 9 study provinces (matches reference image)
+  const labelMarkers = new Map();
+  const labelPane = map.getPane('provinceLabelPane') ? 'provinceLabelPane' : 'overlayPane';
+  for (const provName of STUDY_PROVINCES) {
+    const coords = PROVINCE_LABEL_COORDS[provName];
+    if (!coords) continue;
+    const icon = L.divIcon({
+      className: 'map-province-label-wrapper',
+      html: `<span class="map-province-label-pill ${state.province === provName ? 'is-selected' : ''}">${provName}</span>`,
+      iconSize: [86, 24],
+      iconAnchor: [43, 12]
+    });
+    const lblMarker = L.marker(coords, {
+      pane: labelPane,
+      icon,
+      interactive: false,
+      keyboard: false
+    });
+    group.addLayer(lblMarker);
+    labelMarkers.set(provName, lblMarker);
+  }
+
   group.addTo(map);
+  map._provinceLayerGroup = group;
+  map._provinceGeoLayer = geoLayer;
+  map._provinceLabelMarkers = labelMarkers;
+  map._provinceGeoUpdateCount = 0;
 
   if (legendContainerId) {
     renderMapChoroplethLegend(legendContainerId, metric, provStats, isCompareMode);
@@ -596,46 +741,273 @@ export function renderThailandProvinceMap(map, options = {}) {
 }
 
 /**
- * Render weather station markers with optional geodesic 10 km circle for selected station
+ * Separate closely spaced station coordinates slightly for visual clarity & independent clicking
+ * while preserving true lat/lon in station metadata.
+ */
+function computeSeparatedStationCoords(stations) {
+  const coordsMap = new Map();
+  const minDistDeg = 0.024;
+
+  const visited = new Set();
+  for (let i = 0; i < stations.length; i++) {
+    const s1 = stations[i];
+    if (visited.has(s1.station_id)) continue;
+
+    const cluster = [s1];
+    visited.add(s1.station_id);
+
+    for (let j = i + 1; j < stations.length; j++) {
+      const s2 = stations[j];
+      if (visited.has(s2.station_id)) continue;
+      const dLat = s1.lat - s2.lat;
+      const dLon = s1.lon - s2.lon;
+      const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+      if (dist < minDistDeg) {
+        cluster.push(s2);
+        visited.add(s2.station_id);
+      }
+    }
+
+    if (cluster.length === 1) {
+      coordsMap.set(s1.station_id, { lat: s1.lat, lon: s1.lon, isOffset: false });
+    } else {
+      const centerLat = cluster.reduce((sum, s) => sum + s.lat, 0) / cluster.length;
+      const centerLon = cluster.reduce((sum, s) => sum + s.lon, 0) / cluster.length;
+      const radiusDeg = 0.016;
+      cluster.forEach((st, idx) => {
+        const angle = (2 * Math.PI * idx) / cluster.length;
+        coordsMap.set(st.station_id, {
+          lat: centerLat + radiusDeg * Math.sin(angle),
+          lon: centerLon + radiusDeg * Math.cos(angle),
+          isOffset: true
+        });
+      });
+    }
+  }
+  return coordsMap;
+}
+
+/**
+ * Helper to update the selected station highlight ring, 10 km circle, and floating callout label
+ */
+function updateSelectedStationHighlightOverlay(map, highlightGroup, selectedSt, dispCoords, isApplied) {
+  highlightGroup.clearLayers();
+  if (!selectedSt || !dispCoords) return;
+
+  const paneName = map.getPane('stationPane') ? 'stationPane' : 'overlayPane';
+  const calloutPane = map.getPane('stationCalloutPane') ? 'stationCalloutPane' : paneName;
+  const stationCode = (selectedSt.station_id || '').split('|')[0] || selectedSt.station_id;
+
+  // 1. Geodesic 10 km radius circle around true station coordinate
+  const radiusCircle = L.circle([selectedSt.lat, selectedSt.lon], {
+    radius: 10000,
+    color: '#10B981',
+    weight: 2.0,
+    dashArray: '5, 5',
+    fillColor: '#10B981',
+    fillOpacity: 0.14,
+    interactive: false
+  });
+  highlightGroup.addLayer(radiusCircle);
+
+  // 2. Outer Mint / Cyan Highlight Ring around selected marker (pulses gently once via CSS)
+  const outerHighlightRing = L.circleMarker([dispCoords.lat, dispCoords.lon], {
+    pane: paneName,
+    radius: 16,
+    fillColor: isApplied ? '#10B981' : '#00E5FF',
+    fillOpacity: 0.32,
+    color: '#FFFFFF',
+    weight: 2.5,
+    interactive: false,
+    className: 'station-marker-highlight-ring'
+  });
+  highlightGroup.addLayer(outerHighlightRing);
+
+  // 3. Floating Reference-Style White Callout Card below selected station marker (like CNX-03 in reference image)
+  const calloutIcon = L.divIcon({
+    className: 'station-selected-callout-wrapper',
+    html: `
+      <div class="station-selected-callout-box">
+        <div class="callout-code">${stationCode}</div>
+        <div class="callout-name">${selectedSt.station_name}</div>
+      </div>
+    `,
+    iconSize: [180, 44],
+    iconAnchor: [90, -14]
+  });
+  const calloutMarker = L.marker([dispCoords.lat, dispCoords.lon], {
+    pane: calloutPane,
+    icon: calloutIcon,
+    interactive: false,
+    keyboard: false
+  });
+  highlightGroup.addLayer(calloutMarker);
+}
+
+/**
+ * Render OR Smoothly Update weather station markers in-place without recreating marker DOM elements
  */
 export function renderStationMarkers(map, stations, options = {}) {
   if (!map || !stations) return null;
 
+  const state = getState();
+  const db = getDb();
   const {
     selectedStationId = null,
+    appliedStationId = state.stationId,
     selectedProvince = null,
     onSelectStation = null,
     stationStatsMap = new Map()
   } = options;
 
-  const layerGroup = L.layerGroup();
+  map._latestStationSelectCallback = onSelectStation;
+
+  // Build quick per-station stats from real stationMonthDashboard
+  const statsLookup = new Map(stationStatsMap);
+  if (statsLookup.size === 0 && db.stationMonthDashboard && db.stationMonthDashboard.length > 0) {
+    const filteredRows = filterStationMonthRecords(db.stationMonthDashboard, {
+      ...state,
+      province: null,
+      district: null,
+      tambon: null,
+      stationId: null
+    });
+    for (const st of stations) {
+      const stRows = filteredRows.filter(r => r.station_id === st.station_id);
+      const meanTemp = calculateMean(stRows, 'temp').mean;
+      const meanRain = calculateMean(stRows, 'rainfall').mean;
+      const meanHum = calculateMean(stRows, 'humidity').mean;
+      const hotspots10km = stRows.reduce((acc, r) => acc + (Number(r.hotspots_within_10km) || 0), 0);
+      statsLookup.set(st.station_id, { meanTemp, meanRain, meanHum, hotspots10km });
+    }
+  }
+
+  const displayCoords = computeSeparatedStationCoords(stations);
+  const stationIdsSignature = stations.map(s => s.station_id).join('||');
+
+  // Check if we can update the existing station markers layer IN-PLACE without recreating markers
+  if (
+    map._stationMasterGroup &&
+    map.hasLayer(map._stationMasterGroup) &&
+    map._stationIdsSignature === stationIdsSignature &&
+    map._stationMarkerMap
+  ) {
+    for (const st of stations) {
+      const marker = map._stationMarkerMap.get(st.station_id);
+      if (!marker) continue;
+
+      const isSelected = st.station_id === selectedStationId;
+      const isInSelectedProv = !selectedProvince || st.province === selectedProvince;
+      const isHrdiField = st.source_type === 'HRDI Weather Station';
+      const stationCode = (st.station_id || '').split('|')[0] || st.station_id;
+      const stat = statsLookup.get(st.station_id);
+
+      marker.setRadius(isSelected ? 9.5 : (isInSelectedProv ? 6.6 : 5.0));
+      marker.setStyle({
+        fillColor: isSelected ? '#10B981' : (isHrdiField ? '#10B981' : '#0284C7'),
+        color: '#FFFFFF',
+        weight: isSelected ? 2.8 : 2.0,
+        opacity: isInSelectedProv ? 1 : 0.6,
+        fillOpacity: isSelected ? 1 : (isInSelectedProv ? 0.94 : 0.5)
+      });
+
+      const el = marker.getElement();
+      if (el) {
+        el.classList.toggle('station-marker-active', isSelected);
+        el.setAttribute('data-station-id', st.station_id);
+        el.setAttribute('data-station-code', stationCode);
+        el.setAttribute('data-source-type', st.source_type || 'OpenWeatherMap');
+      }
+
+      const hotspot10kmText = stat && stat.hotspots10km !== undefined
+        ? `<div class="tt-row"><span>จุดความร้อนในรัศมี 10 กม.:</span> <strong>${formatInt(stat.hotspots10km)} จุด</strong></div>`
+        : '';
+
+      if (marker.getTooltip()) {
+        marker.setTooltipContent(`
+          <div class="clean-map-tooltip">
+            <div class="tt-title">[${stationCode}] ${st.station_name}</div>
+            <div class="tt-row"><span>ที่ตั้ง:</span> <strong>จ.${st.province} · อ.${st.district || '-'} · ต.${st.tambon || '-'}</strong></div>
+            <div class="tt-row"><span>แหล่งข้อมูล:</span> <strong>${st.source_type || 'OpenWeatherMap'}</strong></div>
+            ${stat && stat.meanTemp !== null ? `<div class="tt-row"><span>อุณหภูมิเฉลี่ย:</span> <strong>${formatNum(stat.meanTemp, 1)} °C</strong></div>` : ''}
+            ${stat && stat.meanHum !== null ? `<div class="tt-row"><span>ความชื้นเฉลี่ย:</span> <strong>${formatNum(stat.meanHum, 1)} %</strong></div>` : ''}
+            ${stat && stat.meanRain !== null ? `<div class="tt-row"><span>ฝนสถานีเฉลี่ย:</span> <strong>${formatNum(stat.meanRain, 1)} มม.</strong></div>` : ''}
+            ${hotspot10kmText}
+            <div class="tt-row" style="margin-top:4px; color:#0B96B5; font-weight:700;"><span>คลิกจุดสถานีเพื่อเปิดดูรายละเอียด</span></div>
+          </div>
+        `);
+      }
+    }
+
+    const selectedSt = selectedStationId ? stations.find(s => s.station_id === selectedStationId) : null;
+    const selectedDisp = selectedSt ? (displayCoords.get(selectedSt.station_id) || { lat: selectedSt.lat, lon: selectedSt.lon }) : null;
+    updateSelectedStationHighlightOverlay(
+      map,
+      map._stationHighlightGroup,
+      selectedSt,
+      selectedDisp,
+      Boolean(selectedStationId && selectedStationId === appliedStationId)
+    );
+
+    map._stationMarkersUpdateCount = (map._stationMarkersUpdateCount || 0) + 1;
+    return map._stationMasterGroup;
+  }
+
+  // Otherwise, remove previous station master group (if any) and create fresh marker instances
+  if (map._stationMasterGroup) {
+    try {
+      map.removeLayer(map._stationMasterGroup);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const masterGroup = L.layerGroup();
+  const highlightGroup = L.layerGroup();
+  masterGroup.addLayer(highlightGroup);
+
+  const markerMap = new Map();
+  const paneName = map.getPane('stationPane') ? 'stationPane' : 'overlayPane';
 
   for (const st of stations) {
     const isSelected = st.station_id === selectedStationId;
     const isInSelectedProv = !selectedProvince || st.province === selectedProvince;
-    const stat = stationStatsMap.get(st.station_id);
+    const stat = statsLookup.get(st.station_id);
     const isHrdiField = st.source_type === 'HRDI Weather Station';
+    const stationCode = (st.station_id || '').split('|')[0] || st.station_id;
+    const disp = displayCoords.get(st.station_id) || { lat: st.lat, lon: st.lon, isOffset: false };
 
-    if (isSelected) {
-      const radiusCircle = L.circle([st.lat, st.lon], {
-        radius: 10000,
-        color: '#0B96B5',
-        weight: 2.0,
-        dashArray: '5, 5',
-        fillColor: '#19C5D8',
-        fillOpacity: 0.14,
+    if (disp.isOffset) {
+      const leaderLine = L.polyline([[st.lat, st.lon], [disp.lat, disp.lon]], {
+        pane: paneName,
+        color: '#081B2D',
+        weight: 1.2,
+        dashArray: '2, 3',
+        opacity: 0.65,
         interactive: false
       });
-      layerGroup.addLayer(radiusCircle);
+      masterGroup.addLayer(leaderLine);
     }
 
-    const marker = L.circleMarker([st.lat, st.lon], {
-      radius: isSelected ? 8.5 : (isInSelectedProv ? 5.8 : 4.2),
-      fillColor: isSelected ? '#F97316' : (isHrdiField ? '#10B981' : '#081B2D'),
+    const marker = L.circleMarker([disp.lat, disp.lon], {
+      pane: paneName,
+      radius: isSelected ? 9.5 : (isInSelectedProv ? 6.6 : 5.0),
+      fillColor: isSelected ? '#10B981' : (isHrdiField ? '#10B981' : '#0284C7'),
       color: '#FFFFFF',
-      weight: isSelected ? 2.4 : 1.5,
-      opacity: isInSelectedProv ? 1 : 0.45,
-      fillOpacity: isSelected ? 0.98 : (isInSelectedProv ? 0.88 : 0.35)
+      weight: isSelected ? 2.8 : 2.0,
+      opacity: isInSelectedProv ? 1 : 0.6,
+      fillOpacity: isSelected ? 1 : (isInSelectedProv ? 0.94 : 0.5),
+      className: `station-marker-point ${isSelected ? 'station-marker-active' : ''} ${isHrdiField ? 'station-marker-hrdi' : 'station-marker-owm'}`
+    });
+
+    marker._stationData = st;
+    marker.on('add', () => {
+      const el = marker.getElement();
+      if (el) {
+        el.setAttribute('data-station-id', st.station_id);
+        el.setAttribute('data-station-code', stationCode);
+        el.setAttribute('data-source-type', st.source_type || 'OpenWeatherMap');
+      }
     });
 
     const hotspot10kmText = stat && stat.hotspots10km !== undefined
@@ -644,27 +1016,47 @@ export function renderStationMarkers(map, stations, options = {}) {
 
     marker.bindTooltip(`
       <div class="clean-map-tooltip">
-        <div class="tt-title">สถานี${st.station_name}</div>
-        <div class="tt-row"><span>ที่ตั้ง:</span> <strong>จ.${st.province} · อ.${st.district || '-'}</strong></div>
+        <div class="tt-title">[${stationCode}] ${st.station_name}</div>
+        <div class="tt-row"><span>ที่ตั้ง:</span> <strong>จ.${st.province} · อ.${st.district || '-'} · ต.${st.tambon || '-'}</strong></div>
         <div class="tt-row"><span>แหล่งข้อมูล:</span> <strong>${st.source_type || 'OpenWeatherMap'}</strong></div>
         ${stat && stat.meanTemp !== null ? `<div class="tt-row"><span>อุณหภูมิเฉลี่ย:</span> <strong>${formatNum(stat.meanTemp, 1)} °C</strong></div>` : ''}
+        ${stat && stat.meanHum !== null ? `<div class="tt-row"><span>ความชื้นเฉลี่ย:</span> <strong>${formatNum(stat.meanHum, 1)} %</strong></div>` : ''}
         ${stat && stat.meanRain !== null ? `<div class="tt-row"><span>ฝนสถานีเฉลี่ย:</span> <strong>${formatNum(stat.meanRain, 1)} มม.</strong></div>` : ''}
         ${hotspot10kmText}
+        <div class="tt-row" style="margin-top:4px; color:#0B96B5; font-weight:700;"><span>คลิกจุดสถานีเพื่อเปิดดูรายละเอียด</span></div>
       </div>
-    `, { direction: 'top', offset: [0, -6] });
+    `, { direction: 'top', offset: [0, -8] });
 
     marker.on('click', (e) => {
       L.DomEvent.stopPropagation(e);
-      if (typeof onSelectStation === 'function') {
-        onSelectStation(st);
+      const cb = map._latestStationSelectCallback;
+      if (typeof cb === 'function') {
+        cb(st);
       }
     });
 
-    layerGroup.addLayer(marker);
+    masterGroup.addLayer(marker);
+    markerMap.set(st.station_id, marker);
   }
 
-  layerGroup.addTo(map);
-  return layerGroup;
+  const selectedSt = selectedStationId ? stations.find(s => s.station_id === selectedStationId) : null;
+  const selectedDisp = selectedSt ? (displayCoords.get(selectedSt.station_id) || { lat: selectedSt.lat, lon: selectedSt.lon }) : null;
+  updateSelectedStationHighlightOverlay(
+    map,
+    highlightGroup,
+    selectedSt,
+    selectedDisp,
+    Boolean(selectedStationId && selectedStationId === appliedStationId)
+  );
+
+  masterGroup.addTo(map);
+  map._stationMasterGroup = masterGroup;
+  map._stationHighlightGroup = highlightGroup;
+  map._stationMarkerMap = markerMap;
+  map._stationIdsSignature = stationIdsSignature;
+  map._stationMarkersUpdateCount = 0;
+
+  return masterGroup;
 }
 
 /**
@@ -672,11 +1064,31 @@ export function renderStationMarkers(map, stations, options = {}) {
  */
 export function renderStationMarkersWithRadius(map, stations, selectedStationId = null, onSelectStation = null) {
   const state = getState();
+  const activeStationId = selectedStationId || state.previewStationId || state.stationId;
   return renderStationMarkers(map, stations, {
-    selectedStationId,
+    selectedStationId: activeStationId,
+    appliedStationId: state.stationId,
     selectedProvince: state.province,
     onSelectStation
   });
+}
+
+/**
+ * Clear station markers from the map cleanly when toggled off
+ */
+export function clearStationMarkersLayer(map) {
+  if (!map) return;
+  if (map._stationMasterGroup) {
+    try {
+      map.removeLayer(map._stationMasterGroup);
+    } catch (e) {
+      // ignore
+    }
+    map._stationMasterGroup = null;
+    map._stationHighlightGroup = null;
+    map._stationMarkerMap = null;
+    map._stationIdsSignature = null;
+  }
 }
 
 /**

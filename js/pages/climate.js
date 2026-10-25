@@ -24,6 +24,7 @@ import {
   THAI_MONTH_NAMES,
   YEAR_COLORS
 } from '../charts.js';
+import { animateKpiValue } from '../animations.js';
 
 export const METRIC_CONFIG = {
   temp: { label: 'อุณหภูมิเฉลี่ย', unit: '°C', decimals: 1 },
@@ -106,7 +107,7 @@ function renderClimateInsights(state, hrdi2022, hrdi2023, hrdiAll, metric, metri
   if (topMonth && lowMonth) {
     insightEl.textContent = `ใน${scopeTxt} ค่า${metricCfg.label}เฉลี่ยอยู่ที่ ${formatNum(stats.mean, metricCfg.decimals)} ${metricCfg.unit} โดยสูงสุดในเดือน${THAI_MONTH_NAMES[topMonth.month - 1]} (${formatNum(topMonth.mean, metricCfg.decimals)} ${metricCfg.unit}) และต่ำสุดในเดือน${THAI_MONTH_NAMES[lowMonth.month - 1]} (${formatNum(lowMonth.mean, metricCfg.decimals)} ${metricCfg.unit})`;
   } else {
-    insightEl.textContent = `ใน${scopeTxt} ค่า${metricCfg.label}เฉลี่ยอยู่ที่ ${formatNum(stats.mean, metricCfg.decimals)} ${metricCfg.unit} (จาก ${stats.count} ระเบียนตรวจวัดจริง)`;
+    insightEl.textContent = `ใน${scopeTxt} ค่า${metricCfg.label}เฉลี่ยอยู่ที่ ${formatNum(stats.mean, metricCfg.decimals)} ${metricCfg.unit} (จาก ${stats.count} แถวข้อมูลตรวจวัดจริง)`;
   }
 }
 
@@ -123,7 +124,9 @@ function renderClimateSummaryCards(state, hrdi2022, hrdi2023, hrdiAll, hii2022, 
   const minMaxEl = document.getElementById('climate-metric-minmax');
   const hiiSummaryEl = document.getElementById('climate-hii-rain-summary');
 
-  if (valEl) valEl.textContent = formatNum(stats.mean, metricCfg.decimals);
+  if (valEl) {
+    animateKpiValue(valEl, stats.mean, { decimals: metricCfg.decimals, duration: 900, fallback: 'N/A' });
+  }
   if (unitEl) unitEl.textContent = metricCfg.unit;
   if (minMaxEl) {
     minMaxEl.textContent = stats.count > 0
@@ -145,7 +148,7 @@ function renderClimateSummaryCards(state, hrdi2022, hrdi2023, hrdiAll, hii2022, 
         subEl.textContent = `N/A (${yoy.note})`;
       }
     } else {
-      subEl.textContent = `คำนวณจาก ${formatInt(stats.count)} ระเบียนตรวจวัดจริง (ปี ${state.yearMode})`;
+      subEl.textContent = `คำนวณจาก ${formatInt(stats.count)} แถวข้อมูลตรวจวัดจริง (ปี ${state.yearMode})`;
     }
   }
 
@@ -156,7 +159,7 @@ function renderClimateSummaryCards(state, hrdi2022, hrdi2023, hrdiAll, hii2022, 
       const diffTxt = hiiYoy.diff !== null ? formatSignedDelta(hiiYoy.diff, 1, 'มม.') : 'N/A';
       hiiSummaryEl.textContent = `ฝนเฉลี่ยระดับจังหวัด (HII): ${formatNum(hiiStats.mean, 1)} มม./เดือน (YoY ${diffTxt} จาก ${hiiYoy.nPairs} คู่จังหวัด-เดือน)`;
     } else {
-      hiiSummaryEl.textContent = `ฝนเฉลี่ยระดับจังหวัด (HII ปี ${state.yearMode}): ${formatNum(hiiStats.mean, 1)} มม./เดือน (${hiiStats.count} ระเบียนจังหวัด-เดือน)`;
+      hiiSummaryEl.textContent = `ฝนเฉลี่ยระดับจังหวัด (HII ปี ${state.yearMode}): ${formatNum(hiiStats.mean, 1)} มม./เดือน (${hiiStats.count} แถวข้อมูลจังหวัด-เดือน)`;
     }
   }
 }

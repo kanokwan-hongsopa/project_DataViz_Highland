@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "description": "Highland Weather Station Photo & Identity Registry (2022–2023)",
+    "total_stations": 50,
+    "verified_photos_count": 1,
+    "fallback_graphics_count": 49,
+    "policy": "Strict verification: only verified authentic station photographs are linked. All other stations use tailored dynamic identity graphics with transparent non-photo badges."
+  },
+  "stations": {
+    "RPF|สถานีตรวจวัดสภาพอากาศอุทยานหลวงราชพฤกษ์|18.75073|98.92753": {
+      "station_id": "RPF|สถานีตรวจวัดสภาพอากาศอุทยานหลวงราชพฤกษ์|18.75073|98.92753",
+      "station_code": "RPF",
+      "station_name": "สถานีตรวจวัดสภาพอากาศอุทยานหลวงราชพฤกษ์",
+      "province": "เชียงใหม่",
+      "has_verified_photo": true,
+      "image_path": "assets/weather_station_tower.jpg",
+      "source_name": "เครือข่ายสถานีตรวจวัดสภาพอากาศอัตโนมัติ สถาบันวิจัยและพัฒนาพื้นที่สูง (องค์การมหาชน)",
+      "source_url": "https://www.hrdi.or.th",
+      "photo_credit": "HRDI Agro-Meteorological Network Reference Photo",
+      "license": "CC-BY-NC 4.0 / สิทธิ์การใช้งานเพื่อการศึกษาและวิจัย",
+      "verification_status": "verified",
+      "caption": "หอตรวจวัดสภาพอากาศมาตรฐานบนพื้นที่สูง อุทยานหลวงราชพฤกษ์ จ.เชียงใหม่",
+      "alt_text": "ภาพถ่ายหอตรวจวัดสภาพอากาศมาตรฐานบนพื้นที่สูง อุทยานหลวงราชพฤกษ์"
+    }
+  }
+}

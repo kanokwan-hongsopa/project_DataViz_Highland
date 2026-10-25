@@ -475,7 +475,7 @@ function renderCrossRainfallSection(state) {
         ? `YoY: ${formatSignedDelta(hrdiYoY.diff, 1, 'มม.')} (N = ${hrdiYoY.nPairs} คู่สถานี-เดือน)`
         : hrdiYoY.note;
     } else {
-      hrdiSubEl.textContent = `เฉลี่ยจาก ${hrdiStats.count} ระเบียนสถานี (${state.weatherSource === 'all' ? 'ทุกแหล่ง' : state.weatherSource})`;
+      hrdiSubEl.textContent = `เฉลี่ยจาก ${hrdiStats.count} แถวข้อมูลสถานี (${state.weatherSource === 'all' ? 'ทุกแหล่ง' : state.weatherSource})`;
     }
   }
 
@@ -489,7 +489,7 @@ function renderCrossRainfallSection(state) {
         ? `YoY: ${formatSignedDelta(hiiYoY.diff, 1, 'มม.')} (N = ${hiiYoY.nPairs} คู่จังหวัด-เดือน) · ข้อมูลระดับจังหวัด`
         : 'ไม่มีข้อมูลเปรียบเทียบ';
     } else {
-      hiiSubEl.textContent = `เฉลี่ยระดับจังหวัด (${hiiStats.count} ระเบียน HII — ไม่แยกตามสถานี/แหล่งสถานี)`;
+      hiiSubEl.textContent = `เฉลี่ยระดับจังหวัด (${hiiStats.count} แถวข้อมูล HII — ไม่แยกตามสถานี/แหล่งสถานี)`;
     }
   }
 

@@ -17,6 +17,7 @@ import {
   renderBarChart,
   YEAR_COLORS
 } from '../charts.js';
+import { animateKpiValue } from '../animations.js';
 
 /**
  * Render Tab Q5: Data Quality, Completeness, Stations by Province, Methodology & Provenance
@@ -52,7 +53,7 @@ export function renderRainfallPage() {
     const matchedStations = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
     const owmCount = matchedStations.filter(s => s.source_type === 'OpenWeatherMap').length;
     const hrdiSensorCount = matchedStations.filter(s => s.source_type === 'HRDI Weather Station').length;
-    insightEl.textContent = `ขอบเขตที่เลือกมีสถานีตรวจวัด ${matchedStations.length} แห่ง (OpenWeatherMap ${owmCount} แห่ง และสถานีภาคสนาม HRDI ${hrdiSensorCount} แห่ง) รวมข้อมูลภูมิอากาศจริง ${formatInt(hrdiAll.length)} ระเบียน ข้อมูลฝนระดับจังหวัด HII ${formatInt(hiiAll.length)} ระเบียน และจุดความร้อนดาวเทียม ${formatInt(hotspotTotal)} รายการ`;
+    insightEl.textContent = `ขอบเขตที่เลือกมีสถานีตรวจวัด ${matchedStations.length} แห่ง (OpenWeatherMap ${owmCount} แห่ง และสถานีภาคสนาม HRDI ${hrdiSensorCount} แห่ง) รวมข้อมูลภูมิอากาศจริง ${formatInt(hrdiAll.length)} แถว ข้อมูลฝนระดับจังหวัด HII ${formatInt(hiiAll.length)} แถว และจุดความร้อนดาวเทียม ${formatInt(hotspotTotal)} รายการตรวจพบ`;
   }
 }
 
@@ -66,22 +67,22 @@ function renderQualitySummaryCards(state, hrdi2022, hrdi2023, hrdiAll, hiiAll, h
 
   const stVal = document.getElementById('q5-stations-val');
   const stSub = document.getElementById('q5-stations-sub');
-  if (stVal) stVal.textContent = `${matchedStations.length} สถานี`;
+  if (stVal) animateKpiValue(stVal, matchedStations.length, { decimals: 0, duration: 860, suffix: ' สถานี', fallback: '0 สถานี' });
   if (stSub) stSub.textContent = `OpenWeatherMap: ${owmCount} แห่ง · HRDI Weather Station: ${hrdiSensorCount} แห่ง`;
 
   const recVal = document.getElementById('q5-hrdi-records-val');
   const recSub = document.getElementById('q5-hrdi-records-sub');
-  if (recVal) recVal.textContent = `${formatInt(hrdiAll.length)} ระเบียน`;
-  if (recSub) recSub.textContent = `ปี 2022: ${formatInt(hrdi2022.length)} ระเบียน (ม.ค.–ธ.ค.) · ปี 2023: ${formatInt(hrdi2023.length)} ระเบียน (ม.ค.–ก.ย.)`;
+  if (recVal) animateKpiValue(recVal, hrdiAll.length, { decimals: 0, duration: 900, suffix: ' แถวข้อมูล', fallback: '0 แถวข้อมูล' });
+  if (recSub) recSub.textContent = `ปี 2022: ${formatInt(hrdi2022.length)} แถว (ม.ค.–ธ.ค.) · ปี 2023: ${formatInt(hrdi2023.length)} แถว (ม.ค.–ก.ย.)`;
 
   const hiiVal = document.getElementById('q5-hii-records-val');
   const hiiSub = document.getElementById('q5-hii-records-sub');
-  if (hiiVal) hiiVal.textContent = `${formatInt(hiiAll.length)} ระเบียน`;
+  if (hiiVal) animateKpiValue(hiiVal, hiiAll.length, { decimals: 0, duration: 900, suffix: ' แถวข้อมูล', fallback: '0 แถวข้อมูล' });
   if (hiiSub) hiiSub.textContent = `ข้อมูลฝนระดับจังหวัด HII (ครบ 12 เดือนทั้งปี 2022 และ 2023)`;
 
   const hsVal = document.getElementById('q5-hotspot-records-val');
   const hsSub = document.getElementById('q5-hotspot-records-sub');
-  if (hsVal) hsVal.textContent = `${formatInt(hotspotTotal)} รายการ`;
+  if (hsVal) animateKpiValue(hsVal, hotspotTotal, { decimals: 0, duration: 940, suffix: ' รายการ', fallback: '0 รายการ' });
   if (hsSub) hsSub.textContent = `จากทั้งหมด 106,036 รายการตรวจพบดาวเทียม VIIRS (24 พาร์ทิชันรายเดือน)`;
 }
 
@@ -104,13 +105,13 @@ function renderCompletenessByProvinceChart(state) {
     labels: provStats.map(p => p.province),
     datasets: [
       {
-        label: 'ระเบียนปี 2022 (ครบ 12 เดือน)',
+        label: 'ข้อมูลปี 2022 (ครบ 12 เดือน)',
         data: provStats.map(p => p.c2022),
         backgroundColor: YEAR_COLORS.y2022,
         borderRadius: 5
       },
       {
-        label: 'ระเบียนปี 2023 (มีข้อมูล ม.ค.–ก.ย.)',
+        label: 'ข้อมูลปี 2023 (มีข้อมูล ม.ค.–ก.ย.)',
         data: provStats.map(p => p.c2023),
         backgroundColor: YEAR_COLORS.y2023,
         borderRadius: 5
@@ -129,7 +130,7 @@ function renderCompletenessByProvinceChart(state) {
     },
     scales: {
       y: {
-        title: { display: true, text: 'จำนวนระเบียนสถานี-เดือนที่มีข้อมูลจริง (คลิกจังหวัดเพื่อกรอง)' }
+        title: { display: true, text: 'จำนวนแถวข้อมูลรายเดือนที่มีข้อมูลจริง (คลิกจังหวัดเพื่อกรอง)' }
       }
     }
   });
@@ -215,7 +216,7 @@ function renderWeatherSourceDistributionChart(state) {
         borderRadius: 6
       },
       {
-        label: 'จำนวนระเบียนในช่วงเวลาที่เลือก (ระเบียน)',
+        label: 'จำนวนข้อมูลในช่วงเวลาที่เลือก (แถว)',
         data: recordCounts,
         backgroundColor: '#168B68',
         borderRadius: 6
@@ -289,9 +290,9 @@ function renderStationCompletenessTable(state) {
           <th>จังหวัด</th>
           <th>อำเภอ / ตำบล</th>
           <th>พิกัด (Lat, Lon)</th>
-          <th>ระเบียนปี 2022</th>
-          <th>ระเบียนปี 2023 (ม.ค.–ก.ย.)</th>
-          <th>รวมระเบียนที่มีจริง</th>
+          <th>ข้อมูลปี 2022</th>
+          <th>ข้อมูลปี 2023 (ม.ค.–ก.ย.)</th>
+          <th>รวมแถวข้อมูลที่มีจริง</th>
         </tr>
       </thead>
       <tbody>
@@ -322,7 +323,7 @@ function renderStationCompletenessTable(state) {
         <td style="font-family:monospace; font-size:0.78rem;">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</td>
         <td><strong>${r22}</strong> / 12 เดือน</td>
         <td><strong>${r23}</strong> / 9 เดือน</td>
-        <td><strong style="color:#0B96B5;">${total}</strong> ระเบียน</td>
+        <td><strong style="color:#0B96B5;">${total}</strong> แถว</td>
       </tr>
     `;
   }

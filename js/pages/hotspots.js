@@ -31,6 +31,7 @@ import {
   THAI_MONTH_NAMES,
   YEAR_COLORS
 } from '../charts.js';
+import { animateKpiValue } from '../animations.js';
 
 let hotspotMap = null;
 let currentBaseGeoLayer = null;
@@ -111,14 +112,16 @@ function renderHotspotKpis(state, count2022, count2023, totalCount) {
   const projValEl = document.getElementById('hotspots-in-project-kpi-val');
   if (highValEl) {
     const pct = totalCount > 0 ? ((elevBd.highTotal / totalCount) * 100).toFixed(1) : '0.0';
-    highValEl.textContent = `${formatInt(elevBd.highTotal)} (${pct}%)`;
+    animateKpiValue(highValEl, elevBd.highTotal, { decimals: 0, duration: 900, suffix: ` (${pct}%)`, fallback: '0 (0.0%)' });
   }
   if (projValEl) {
     const pct = totalCount > 0 ? ((projBd.inTotal / totalCount) * 100).toFixed(1) : '0.0';
-    projValEl.textContent = `${formatInt(projBd.inTotal)} (${pct}%)`;
+    animateKpiValue(projValEl, projBd.inTotal, { decimals: 0, duration: 900, suffix: ` (${pct}%)`, fallback: '0 (0.0%)' });
   }
 
-  if (totalValEl) totalValEl.textContent = formatInt(totalCount);
+  if (totalValEl) {
+    animateKpiValue(totalValEl, totalCount, { decimals: 0, duration: 940, fallback: '0' });
+  }
   if (totalSubEl) {
     if (state.yearMode === 'compare') {
       const yoy = calculateHotspotYoY(count2022, count2023);

@@ -1,5 +1,5 @@
 /**
- * charts.js — Chart.js Wrapper, Lifecycle Management, Box Plot & Frosted Ice Glass Styling
+ * charts.js — Chart.js Wrapper, Smooth In-Place Updates, Lifecycle Management, Box Plot & Frosted Ice Glass Styling
  * Highland Climate & Hotspot Intelligence Platform (2022–2023)
  *
  * Strict rules:
@@ -7,8 +7,10 @@
  * - Historical statistical trendlines allowed; NO future forecasting
  * - Frosted Ice Blue Glass theme colors (--text-main: #173A55, --text-secondary: #43627A)
  * - Consistent year colors across all charts
- * - Clean destruction of instances on updates
+ * - Smooth in-place updates (chart.update()) to prevent flickering when filters change
  */
+
+import { prefersReducedMotion } from './animations.js';
 
 const chartRegistry = new Map();
 
@@ -22,12 +24,12 @@ export const FULL_THAI_MONTH_NAMES = [
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
 ];
 
-// Consistent Year Color Palette across the entire dashboard
+// Consistent Year Color Palette across the entire dashboard (Bright Highland Intelligence: 2022 = Fire Orange, 2023 = Teal)
 export const YEAR_COLORS = {
-  y2022: '#E67E22',
-  y2022Bg: 'rgba(230, 126, 34, 0.16)',
-  y2023: '#0B96B5',
-  y2023Bg: 'rgba(11, 150, 181, 0.18)'
+  y2022: '#F5A269',
+  y2022Bg: 'rgba(245, 162, 105, 0.25)',
+  y2023: '#16A9B3',
+  y2023Bg: 'rgba(22, 169, 179, 0.25)'
 };
 
 /**
@@ -92,14 +94,87 @@ export function toggleChartEmptyState(canvasId, isEmpty, message = 'ไม่พ
 }
 
 /**
- * Deep merge helper for Chart.js options
+ * Smoothly synchronize datasets into an existing Chart.js instance without destroying it
+ */
+function syncChartDataInPlace(existingChart, nextData) {
+  if (nextData.labels !== undefined) {
+    existingChart.data.labels = [...nextData.labels];
+  }
+  const currentDatasets = existingChart.data.datasets || [];
+  const incomingDatasets = nextData.datasets || [];
+
+  for (let i = 0; i < incomingDatasets.length; i++) {
+    const incoming = incomingDatasets[i];
+    if (i < currentDatasets.length) {
+      const targetDs = currentDatasets[i];
+      // Remove stale keys that are not in incoming (except internal Chart.js metadata)
+      Object.keys(targetDs).forEach(k => {
+        if (!k.startsWith('_') && !(k in incoming)) {
+          delete targetDs[k];
+        }
+      });
+      Object.assign(targetDs, incoming);
+    } else {
+      currentDatasets.push({ ...incoming });
+    }
+  }
+
+  while (currentDatasets.length > incomingDatasets.length) {
+    currentDatasets.pop();
+  }
+}
+
+/**
+ * Create a new Chart.js instance OR smoothly update the existing instance in-place
+ */
+function createOrUpdateChart(canvasId, type, data, options, plugins = []) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+
+  const existing = chartRegistry.get(canvasId);
+  const existingIndexAxis = existing?.options?.indexAxis || 'x';
+  const nextIndexAxis = options?.indexAxis || 'x';
+
+  if (
+    existing &&
+    existing.canvas === canvas &&
+    existing.config.type === type &&
+    existingIndexAxis === nextIndexAxis
+  ) {
+    // Stop any queued mid-flight animation before applying latest data (prevents race condition)
+    if (typeof existing.stop === 'function') {
+      existing.stop();
+    }
+    syncChartDataInPlace(existing, data);
+    existing.options = options;
+    existing._updateCount = (existing._updateCount || 0) + 1;
+    existing.update();
+    return existing;
+  }
+
+  destroyChart(canvasId);
+  const ctx = canvas.getContext('2d');
+  const chart = new Chart(ctx, {
+    type,
+    data,
+    options,
+    plugins
+  });
+  chart._updateCount = 0;
+  chartRegistry.set(canvasId, chart);
+  return chart;
+}
+
+/**
+ * Deep merge helper for Chart.js options with smooth 620ms easeOutQuart animation
  */
 function buildChartOptions(customOptions = {}) {
   const hasClick = typeof customOptions.onClick === 'function';
+  const reducedMotion = prefersReducedMotion();
   const baseScales = {
     x: {
       grid: {
-        color: 'rgba(23, 58, 85, 0.08)',
+        color: 'rgba(65, 193, 223, 0.12)',
         drawBorder: false
       },
       ticks: {
@@ -108,13 +183,13 @@ function buildChartOptions(customOptions = {}) {
           size: 11,
           weight: '600'
         },
-        color: '#43627A'
+        color: '#A9C5D9'
       },
       ...(customOptions.scales?.x || {})
     },
     y: {
       grid: {
-        color: 'rgba(23, 58, 85, 0.08)',
+        color: 'rgba(65, 193, 223, 0.12)',
         drawBorder: false
       },
       ticks: {
@@ -123,7 +198,7 @@ function buildChartOptions(customOptions = {}) {
           size: 11,
           weight: '600'
         },
-        color: '#43627A'
+        color: '#A9C5D9'
       },
       ...(customOptions.scales?.y || {})
     }
@@ -131,26 +206,36 @@ function buildChartOptions(customOptions = {}) {
 
   if (baseScales.x.title) {
     baseScales.x.title = {
-      color: '#173A55',
+      color: '#F3FAFF',
       font: { family: '"Sarabun", sans-serif', size: 11, weight: '700' },
       ...baseScales.x.title
     };
-    if (baseScales.x.title.color === '#94a3b8') baseScales.x.title.color = '#43627A';
+    if (baseScales.x.title.color === '#94a3b8' || baseScales.x.title.color === '#43627A') baseScales.x.title.color = '#F3FAFF';
   }
   if (baseScales.y.title) {
     baseScales.y.title = {
-      color: '#173A55',
+      color: '#F3FAFF',
       font: { family: '"Sarabun", sans-serif', size: 11, weight: '700' },
       ...baseScales.y.title
     };
-    if (baseScales.y.title.color === '#94a3b8') baseScales.y.title.color = '#43627A';
+    if (baseScales.y.title.color === '#94a3b8' || baseScales.y.title.color === '#43627A') baseScales.y.title.color = '#F3FAFF';
   }
 
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: {
-      duration: 240
+    animation: reducedMotion
+      ? { duration: 0 }
+      : {
+          duration: 620,
+          easing: 'easeOutQuart'
+        },
+    transitions: {
+      active: {
+        animation: {
+          duration: reducedMotion ? 0 : 220
+        }
+      }
     },
     onHover: (event, chartElement) => {
       const target = event?.native?.target;
@@ -172,7 +257,7 @@ function buildChartOptions(customOptions = {}) {
             size: 12,
             weight: '600'
           },
-          color: '#173A55',
+          color: '#F3FAFF',
           usePointStyle: true,
           boxWidth: 9,
           padding: 12
@@ -180,10 +265,10 @@ function buildChartOptions(customOptions = {}) {
         ...(customOptions.plugins?.legend || {})
       },
       tooltip: {
-        backgroundColor: 'rgba(16, 46, 71, 0.96)',
-        titleColor: '#EAF8FE',
-        bodyColor: '#D9F2FB',
-        borderColor: 'rgba(255, 255, 255, 0.35)',
+        backgroundColor: 'rgba(6, 19, 33, 0.94)',
+        titleColor: '#25D9F5',
+        bodyColor: '#F3FAFF',
+        borderColor: 'rgba(65, 193, 223, 0.38)',
         borderWidth: 1,
         titleFont: {
           family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
@@ -214,7 +299,7 @@ const barEndValueLabelPlugin = {
     const isHorizontal = chart.options.indexAxis === 'y';
     ctx.save();
     ctx.font = '700 10.5px "Sarabun", sans-serif';
-    ctx.fillStyle = pluginOptions.color || '#173A55';
+    ctx.fillStyle = pluginOptions.color || '#F3FAFF';
 
     chart.data.datasets.forEach((dataset, datasetIndex) => {
       const meta = chart.getDatasetMeta(datasetIndex);
@@ -241,12 +326,10 @@ const barEndValueLabelPlugin = {
 };
 
 /**
- * Render a Line Chart
+ * Render or Smoothly Update a Line Chart
  */
 export function renderLineChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
-
-  destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return null;
 
@@ -255,24 +338,15 @@ export function renderLineChart(canvasId, data, customOptions = {}) {
   );
   toggleChartEmptyState(canvasId, !hasValidPoint);
 
-  const ctx = canvas.getContext('2d');
-  const chart = new Chart(ctx, {
-    type: 'line',
-    data,
-    options: buildChartOptions(customOptions)
-  });
-
-  chartRegistry.set(canvasId, chart);
-  return chart;
+  const opts = buildChartOptions(customOptions);
+  return createOrUpdateChart(canvasId, 'line', data, opts);
 }
 
 /**
- * Render a Bar Chart (with optional value labels at bar ends)
+ * Render or Smoothly Update a Bar Chart (with optional value labels at bar ends)
  */
 export function renderBarChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
-
-  destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return null;
 
@@ -298,32 +372,18 @@ export function renderBarChart(canvasId, data, customOptions = {}) {
     } else {
       opts.layout = { padding: { top: 18, ...(customOptions.layout?.padding || {}) } };
     }
+  } else if (opts.plugins) {
+    opts.plugins.barEndValueLabel = { enabled: false };
   }
 
-  const ctx = canvas.getContext('2d');
-  const chart = new Chart(ctx, {
-    type: 'bar',
-    data,
-    options: opts,
-    plugins: showEndLabels ? [barEndValueLabelPlugin] : []
-  });
-
-  chartRegistry.set(canvasId, chart);
-  return chart;
+  return createOrUpdateChart(canvasId, 'bar', data, opts, [barEndValueLabelPlugin]);
 }
 
 /**
- * Render a Statistical Box Plot / Quartile Distribution Chart (Min, Q1, Median, Q3, Max, Mean, N)
- * Uses real quartile statistics per group and renders whiskers, IQR box, median line, and mean dot.
- *
- * @param {string} canvasId
- * @param {Array<{label:string, key:string, min:number|null, q1:number|null, median:number|null, q3:number|null, max:number|null, mean:number|null, count:number, isSelected?:boolean}>} statsList
- * @param {Object} customOptions { unit, metricLabel, onSelectGroup }
+ * Render or Smoothly Update a Statistical Box Plot / Quartile Distribution Chart (Min, Q1, Median, Q3, Max, Mean, N)
  */
 export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
-
-  destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return null;
 
@@ -336,7 +396,6 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
   const fmt = (v) => (v !== null && v !== undefined && !Number.isNaN(Number(v))) ? Number(v).toFixed(decimals) : 'N/A';
 
   const labels = statsList.map(s => s.label);
-  // For Chart.js floating bars: [q1, q3]. When q1 === q3 (e.g. N=1), give a tiny visual thickness so bar renders
   const floatingData = statsList.map(s => {
     if (!s || s.count === 0 || s.q1 === null || s.q3 === null) return null;
     const span = Math.abs(s.q3 - s.q1);
@@ -346,7 +405,6 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
     return [s.q1, s.q3];
   });
 
-  // Compute global y min/max so whiskers (min..max) never clip outside the y-axis
   let globalMin = Infinity;
   let globalMax = -Infinity;
   for (const s of validItems) {
@@ -357,16 +415,20 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
     ? (globalMax - globalMin) * 0.14
     : 2;
 
+  // Store latest statsList on canvas so the plugin always reads fresh quartile data during in-place updates
+  canvas._boxPlotStatsList = statsList;
+
   const boxWhiskerPlugin = {
     id: 'boxWhiskerOverlay',
     afterDatasetsDraw(chart) {
+      const currentStats = chart.canvas?._boxPlotStatsList || [];
       const { ctx, scales: { y } } = chart;
       const meta = chart.getDatasetMeta(0);
-      if (!meta || meta.hidden) return;
+      if (!meta || meta.hidden || !y) return;
 
       ctx.save();
       meta.data.forEach((bar, i) => {
-        const s = statsList[i];
+        const s = currentStats[i];
         if (!s || s.count === 0 || s.median === null) return;
 
         const x = bar.x;
@@ -382,25 +444,19 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
 
         const strokeColor = s.isSelected ? '#D97706' : '#102E47';
 
-        // 1. Whiskers (Min to Q1, Q3 to Max)
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = 1.6;
         ctx.beginPath();
-        // Upper whisker
         ctx.moveTo(x, yMax);
         ctx.lineTo(x, yQ3);
-        // Upper cap
         ctx.moveTo(x - capHalf, yMax);
         ctx.lineTo(x + capHalf, yMax);
-        // Lower whisker
         ctx.moveTo(x, yQ1);
         ctx.lineTo(x, yMin);
-        // Lower cap
         ctx.moveTo(x - capHalf, yMin);
         ctx.lineTo(x + capHalf, yMin);
         ctx.stroke();
 
-        // 2. Median horizontal line inside IQR box
         ctx.strokeStyle = s.isSelected ? '#B45309' : '#081B2D';
         ctx.lineWidth = 2.4;
         ctx.beginPath();
@@ -408,7 +464,6 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
         ctx.lineTo(x + barWidth / 2, yMed);
         ctx.stroke();
 
-        // 3. Mean dot
         ctx.fillStyle = '#FA714A';
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 1.2;
@@ -417,7 +472,6 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
         ctx.fill();
         ctx.stroke();
 
-        // 4. Sample size N label above max cap
         ctx.fillStyle = '#43627A';
         ctx.font = '600 9.5px "Sarabun", sans-serif';
         ctx.textAlign = 'center';
@@ -433,7 +487,8 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
       ? (evt, elements) => {
           if (elements && elements.length > 0) {
             const idx = elements[0].index;
-            const item = statsList[idx];
+            const currentStats = canvas._boxPlotStatsList || statsList;
+            const item = currentStats[idx];
             if (item) customOptions.onSelectGroup(item);
           }
         }
@@ -483,11 +538,13 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
         callbacks: {
           title: (items) => {
             if (!items || !items.length) return '';
-            const s = statsList[items[0].dataIndex];
-            return `${s.label} (ตัวอย่าง N = ${s.count})`;
+            const currentStats = canvas._boxPlotStatsList || statsList;
+            const s = currentStats[items[0].dataIndex];
+            return s ? `${s.label} (ตัวอย่าง N = ${s.count})` : '';
           },
           label: (ctx) => {
-            const s = statsList[ctx.dataIndex];
+            const currentStats = canvas._boxPlotStatsList || statsList;
+            const s = currentStats[ctx.dataIndex];
             if (!s || s.count === 0) return ' ไม่มีข้อมูลตรวจวัด';
             const lines = [
               ` สูงสุด (Max): ${fmt(s.max)} ${unit}`,
@@ -507,39 +564,30 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
     }
   });
 
-  const ctx = canvas.getContext('2d');
-  const chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: `${metricLabel} (Q1–Q3)`,
-          data: floatingData,
-          backgroundColor: statsList.map(s => s.isSelected ? 'rgba(245, 158, 11, 0.65)' : 'rgba(24, 182, 229, 0.55)'),
-          borderColor: statsList.map(s => s.isSelected ? '#D97706' : '#0B96B5'),
-          borderWidth: 1.8,
-          borderRadius: 4,
-          borderSkipped: false,
-          barPercentage: 0.55
-        }
-      ]
-    },
-    options: opts,
-    plugins: [boxWhiskerPlugin]
-  });
+  const data = {
+    labels,
+    datasets: [
+      {
+        label: `${metricLabel} (Q1–Q3)`,
+        data: floatingData,
+        backgroundColor: statsList.map(s => s.isSelected ? 'rgba(245, 158, 11, 0.65)' : 'rgba(24, 182, 229, 0.55)'),
+        borderColor: statsList.map(s => s.isSelected ? '#D97706' : '#0B96B5'),
+        borderWidth: 1.8,
+        borderRadius: 4,
+        borderSkipped: false,
+        barPercentage: 0.55
+      }
+    ]
+  };
 
-  chartRegistry.set(canvasId, chart);
-  return chart;
+  return createOrUpdateChart(canvasId, 'bar', data, opts, [boxWhiskerPlugin]);
 }
 
 /**
- * Render a Scatter Chart with optional Linear Regression Statistical Trendline
+ * Render or Smoothly Update a Scatter Chart with optional Linear Regression Statistical Trendline
  */
 export function renderScatterChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
-
-  destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return null;
 
@@ -595,24 +643,14 @@ export function renderScatterChart(canvasId, data, customOptions = {}) {
     ...customOptions
   });
 
-  const ctx = canvas.getContext('2d');
-  const chart = new Chart(ctx, {
-    type: 'scatter',
-    data: chartData,
-    options: opts
-  });
-
-  chartRegistry.set(canvasId, chart);
-  return chart;
+  return createOrUpdateChart(canvasId, 'scatter', chartData, opts);
 }
 
 /**
- * Render a Doughnut Chart
+ * Render or Smoothly Update a Doughnut Chart
  */
 export function renderDoughnutChart(canvasId, data, customOptions = {}) {
   if (typeof Chart === 'undefined') return null;
-
-  destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return null;
 
@@ -622,48 +660,51 @@ export function renderDoughnutChart(canvasId, data, customOptions = {}) {
   toggleChartEmptyState(canvasId, !hasValidSlice);
 
   const hasClick = typeof customOptions.onClick === 'function';
-  const ctx = canvas.getContext('2d');
-  const chart = new Chart(ctx, {
-    type: 'doughnut',
-    data,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      onHover: (event, chartElement) => {
-        const target = event?.native?.target;
-        if (target) {
-          target.style.cursor = (hasClick && chartElement && chartElement.length > 0) ? 'pointer' : 'default';
-        }
-      },
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: {
-            font: {
-              family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
-              size: 11.5,
-              weight: '600'
-            },
-            color: '#173A55',
-            boxWidth: 11,
-            padding: 10
-          }
+  const reducedMotion = prefersReducedMotion();
+  const opts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: reducedMotion
+      ? { duration: 0 }
+      : {
+          duration: 620,
+          easing: 'easeOutQuart',
+          animateRotate: true,
+          animateScale: false
         },
-        tooltip: {
-          backgroundColor: 'rgba(16, 46, 71, 0.96)',
-          titleColor: '#EAF8FE',
-          bodyColor: '#D9F2FB',
-          borderColor: 'rgba(255, 255, 255, 0.35)',
-          borderWidth: 1,
-          padding: 10,
-          cornerRadius: 10
+    onHover: (event, chartElement) => {
+      const target = event?.native?.target;
+      if (target) {
+        target.style.cursor = (hasClick && chartElement && chartElement.length > 0) ? 'pointer' : 'default';
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          font: {
+            family: '"Sarabun", "Noto Sans Thai", -apple-system, sans-serif',
+            size: 11.5,
+            weight: '600'
+          },
+          color: '#173A55',
+          boxWidth: 11,
+          padding: 10
         }
       },
-      cutout: '64%',
-      ...customOptions
-    }
-  });
+      tooltip: {
+        backgroundColor: 'rgba(16, 46, 71, 0.96)',
+        titleColor: '#EAF8FE',
+        bodyColor: '#D9F2FB',
+        borderColor: 'rgba(255, 255, 255, 0.35)',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 10
+      }
+    },
+    cutout: '64%',
+    ...customOptions
+  };
 
-  chartRegistry.set(canvasId, chart);
-  return chart;
+  return createOrUpdateChart(canvasId, 'doughnut', data, opts);
 }

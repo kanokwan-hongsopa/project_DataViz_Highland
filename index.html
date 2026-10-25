@@ -263,11 +263,21 @@
               </div>
               <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณอุณหภูมิเฉลี่ย" data-popover-target="pop-kpi-temp">i</button>
             </div>
-            <div class="kpi-value-row">
-              <span id="kpi-temp-val" class="kpi-main-number">—</span>
-              <span class="kpi-unit">°C</span>
+            <div class="kpi-body-split">
+              <div class="kpi-body-left">
+                <div class="kpi-value-row">
+                  <span id="kpi-temp-val" class="kpi-main-number">—</span>
+                  <span class="kpi-unit">°C</span>
+                </div>
+                <div id="kpi-temp-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+              </div>
+              <div class="kpi-mini-sparkline temp" aria-hidden="true">
+                <svg viewBox="0 0 68 32" fill="none">
+                  <path d="M3 25 C14 23, 20 14, 31 16 C42 18, 49 8, 64 5" stroke="#10B981" stroke-width="2.4" stroke-linecap="round"/>
+                  <path d="M58 4 L65 4 L64 11" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
             </div>
-            <div id="kpi-temp-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
             <div id="pop-kpi-temp" class="info-popover-box" role="tooltip">
               <strong>วิธีคำนวณ:</strong> ค่าเฉลี่ยเลขคณิตของอุณหภูมิรายเดือน (<code>temp</code>) จากสถานีตรวจวัดที่เข้าเงื่อนไข (ไม่รวมเดือนที่ไม่มีข้อมูล)<br>
               <span id="kpi-temp-meta-detail">ชุดข้อมูล: <code>hrdi_station_month.json</code></span>
@@ -287,11 +297,21 @@
               </div>
               <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณความชื้นสัมพัทธ์" data-popover-target="pop-kpi-humidity">i</button>
             </div>
-            <div class="kpi-value-row">
-              <span id="kpi-humidity-val" class="kpi-main-number">—</span>
-              <span class="kpi-unit">%</span>
+            <div class="kpi-body-split">
+              <div class="kpi-body-left">
+                <div class="kpi-value-row">
+                  <span id="kpi-humidity-val" class="kpi-main-number">—</span>
+                  <span class="kpi-unit">%</span>
+                </div>
+                <div id="kpi-humidity-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+              </div>
+              <div class="kpi-mini-sparkline humidity" aria-hidden="true">
+                <svg viewBox="0 0 68 32" fill="none">
+                  <path d="M3 20 Q16 10, 28 18 T52 14 T65 22" stroke="#0EA5E9" stroke-width="2.4" stroke-linecap="round"/>
+                  <path d="M3 20 Q16 10, 28 18 T52 14 T65 22 L65 30 L3 30 Z" fill="rgba(14, 165, 233, 0.16)"/>
+                </svg>
+              </div>
             </div>
-            <div id="kpi-humidity-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
             <div id="pop-kpi-humidity" class="info-popover-box" role="tooltip">
               <strong>วิธีคำนวณ:</strong> ค่าเฉลี่ยเลขคณิตของความชื้นสัมพัทธ์รายเดือน (<code>humidity</code>) จากสถานีตรวจวัดที่เข้าเงื่อนไข<br>
               <span id="kpi-humidity-meta-detail">ชุดข้อมูล: <code>hrdi_station_month.json</code></span>
@@ -314,11 +334,25 @@
               </div>
               <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณปริมาณน้ำฝนเฉลี่ย" data-popover-target="pop-kpi-rain">i</button>
             </div>
-            <div class="kpi-value-row">
-              <span id="kpi-rainfall-val" class="kpi-main-number">—</span>
-              <span class="kpi-unit">มม.</span>
+            <div class="kpi-body-split">
+              <div class="kpi-body-left">
+                <div class="kpi-value-row">
+                  <span id="kpi-rainfall-val" class="kpi-main-number">—</span>
+                  <span class="kpi-unit">มม.</span>
+                </div>
+                <div id="kpi-rainfall-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+              </div>
+              <div class="kpi-mini-sparkline rain" aria-hidden="true">
+                <svg viewBox="0 0 64 32" fill="none">
+                  <rect x="4" y="21" width="6" height="9" rx="2" fill="#38BDF8" opacity="0.55"/>
+                  <rect x="14" y="17" width="6" height="13" rx="2" fill="#38BDF8" opacity="0.7"/>
+                  <rect x="24" y="13" width="6" height="17" rx="2" fill="#0284C7" opacity="0.8"/>
+                  <rect x="34" y="9" width="6" height="21" rx="2" fill="#0284C7" opacity="0.9"/>
+                  <rect x="44" y="5" width="6" height="25" rx="2" fill="#0B96B5"/>
+                  <rect x="54" y="11" width="6" height="19" rx="2" fill="#38BDF8" opacity="0.85"/>
+                </svg>
+              </div>
             </div>
-            <div id="kpi-rainfall-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
             <div id="pop-kpi-rain" class="info-popover-box" role="tooltip">
               <strong>วิธีคำนวณ:</strong> ค่าเฉลี่ยปริมาณน้ำฝนรายเดือนต่อสถานี (HRDI) หรือระดับจังหวัด (HII) ตามแหล่งที่เลือกในตัวกรองเพิ่มเติม<br>
               <span id="kpi-rainfall-meta-detail">ชุดข้อมูล: <code>hrdi_station_month.json</code></span>
@@ -338,11 +372,25 @@
               </div>
               <button type="button" class="info-popover-btn" aria-label="ดูวิธีคำนวณจุดความร้อนจากดาวเทียม" data-popover-target="pop-kpi-hotspot">i</button>
             </div>
-            <div class="kpi-value-row">
-              <span id="kpi-hotspots-val" class="kpi-main-number">—</span>
-              <span class="kpi-unit">จุด</span>
+            <div class="kpi-body-split">
+              <div class="kpi-body-left">
+                <div class="kpi-value-row">
+                  <span id="kpi-hotspots-val" class="kpi-main-number">—</span>
+                  <span class="kpi-unit">จุด</span>
+                </div>
+                <div id="kpi-hotspots-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
+              </div>
+              <div class="kpi-mini-sparkline hotspot" aria-hidden="true">
+                <svg viewBox="0 0 64 32" fill="none">
+                  <rect x="4" y="18" width="6" height="12" rx="2" fill="#FB923C" opacity="0.65"/>
+                  <rect x="14" y="10" width="6" height="20" rx="2" fill="#F97316" opacity="0.85"/>
+                  <rect x="24" y="4" width="6" height="26" rx="2" fill="#EF4444"/>
+                  <rect x="34" y="9" width="6" height="21" rx="2" fill="#F97316" opacity="0.9"/>
+                  <rect x="44" y="15" width="6" height="15" rx="2" fill="#FB923C" opacity="0.75"/>
+                  <rect x="54" y="21" width="6" height="9" rx="2" fill="#FDBA74" opacity="0.7"/>
+                </svg>
+              </div>
             </div>
-            <div id="kpi-hotspots-sub" class="kpi-sub-meta">กำลังคำนวณ...</div>
             <div id="pop-kpi-hotspot" class="info-popover-box" role="tooltip">
               <strong>วิธีคำนวณ:</strong> ผลรวมจำนวนรายการตรวจพบจุดความร้อนจากดาวเทียม VIIRS ตามเงื่อนไขตัวกรองร่วมทั้งหมด (ไม่ใช่จำนวนครั้งที่เกิดไฟป่า)<br>
               <span id="kpi-hotspots-meta-detail">ชุดข้อมูล: <code>hotspot_multidim_index.json</code></span>
@@ -367,6 +415,12 @@
               <span id="kpi-provinces-val" class="kpi-main-number">9</span>
               <span class="kpi-unit">จังหวัด</span>
             </div>
+            <div class="kpi-prov-progress-row">
+              <div class="kpi-prov-progress-track">
+                <span id="kpi-prov-progress-fill" class="kpi-prov-progress-fill" style="width: 100%;"></span>
+              </div>
+              <span id="kpi-prov-progress-pct" class="kpi-prov-progress-pct">100%</span>
+            </div>
             <div id="kpi-provinces-sub" class="kpi-sub-meta">จากพื้นที่ศึกษา 9 จังหวัด</div>
             <div id="pop-kpi-province" class="info-popover-box" role="tooltip">
               <strong>วิธีคำนวณ:</strong> จำนวนจังหวัดที่มีข้อมูลจริงภายใต้ตัวกรองปัจจุบัน (จากพื้นที่ศึกษาทั้งหมด 9 จังหวัด ได้แก่ เชียงใหม่ เชียงราย น่าน ตาก กำแพงเพชร พิษณุโลก เพชรบูรณ์ กาญจนบุรี และแม่ฮ่องสอน)
@@ -377,59 +431,140 @@
       </section>
 
       <!-- SECTION 2: LARGE FULL-WIDTH INTERACTIVE GEOJSON MAP -->
-      <section class="scroll-section" aria-label="แผนที่พื้นที่ศึกษา 9 จังหวัด">
-        <div class="glass-card full-width-section-card">
-          <div class="card-header-bar map-card-header">
-            <div class="title-with-info">
-              <div>
-                <div class="title-row-inline">
-                  <h2 id="overview-map-title" class="card-title">จังหวัดไหนมีอุณหภูมิเพิ่มขึ้นหรือลดลงในปี 2023?</h2>
-                  <button type="button" class="info-popover-btn" aria-label="ข้อมูลแผนที่" data-popover-target="pop-map-q1">i</button>
+      <section id="map-and-station-detail-section" class="scroll-section" aria-label="แผนที่พื้นที่ศึกษา 9 จังหวัดและรายละเอียดสถานีตรวจวัด">
+        <div class="map-station-split-grid">
+          <!-- LEFT COLUMN (~58%): Interactive GeoJSON Choropleth + Station Markers Map -->
+          <div class="glass-card map-split-left-card">
+            <div class="card-header-bar map-card-header">
+              <div class="title-with-info">
+                <div>
+                  <div class="title-row-inline">
+                    <h2 id="overview-map-title" class="card-title">จังหวัดไหนมีอุณหภูมิเพิ่มขึ้นหรือลดลงในปี 2023?</h2>
+                    <button type="button" class="info-popover-btn" aria-label="ข้อมูลแผนที่" data-popover-target="pop-map-q1">i</button>
+                  </div>
+                  <p id="overview-map-subtitle" class="card-subtitle">คลิกจังหวัดเพื่อกรองพื้นที่ หรือกด "แสดงสถานีตรวจวัด" แล้วคลิกจุดสถานีบนแผนที่เพื่อดูรายละเอียด</p>
                 </div>
-                <p id="overview-map-subtitle" class="card-subtitle">คลิกจังหวัดบนแผนที่เพื่อกรองข้อมูล · แสดง 9 จังหวัดศึกษาเทียบกับบริบทประเทศไทย 77 จังหวัด</p>
+                <div id="pop-map-q1" class="info-popover-box" role="tooltip">
+                  <strong>แผนที่ Choropleth &amp; สถานีตรวจวัด (GeoJSON 77 จังหวัด):</strong> ไม่พึ่งพาแผ่นแผนที่ภายนอกที่ต้องใช้ API Key · คลิกจังหวัดเพื่อกรองระดับจังหวัด หรือคลิกจุดสถานีเพื่อเปิดดูรายละเอียดสถานีจริงและเปรียบเทียบปี 2022–2023
+                </div>
               </div>
-              <div id="pop-map-q1" class="info-popover-box" role="tooltip">
-                <strong>แผนที่ Choropleth (GeoJSON 77 จังหวัด):</strong> ไม่พึ่งพาแผ่นแผนที่ภายนอกที่ต้องใช้ API Key · โหมดเปรียบเทียบจะคำนวณผลต่าง (ปี 2023 − ปี 2022) ในช่วงเดือนเดียวกัน
+
+              <div class="map-controls-toolbar">
+                <!-- 3 Year Mode Buttons on Map -->
+                <div class="segmented-control map-year-segmented" aria-label="เลือกโหมดปีของแผนที่">
+                  <button type="button" class="map-year-btn" data-year="2022">ปี 2022</button>
+                  <button type="button" class="map-year-btn" data-year="2023">ปี 2023</button>
+                  <button type="button" class="map-year-btn active" data-year="compare">เปรียบเทียบ</button>
+                </div>
+
+                <!-- Metric Pills -->
+                <div class="card-pill-controls">
+                  <button type="button" class="btn-swipe-metric active" data-metric="temp">อุณหภูมิ</button>
+                  <button type="button" class="btn-swipe-metric" data-metric="humidity">ความชื้น</button>
+                  <button type="button" class="btn-swipe-metric" data-metric="rainfall">ปริมาณฝน</button>
+                  <button type="button" class="btn-swipe-metric" data-metric="hotspots">จุดความร้อน</button>
+                </div>
+
+                <!-- Station Marker Toggle -->
+                <button type="button" id="btn-toggle-map-stations" class="btn-station-toggle" title="เปิด/ปิดจุดสถานีตรวจวัดภูมิอากาศ 50 แห่งบนแผนที่">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span>แสดงสถานีตรวจวัด</span>
+                </button>
               </div>
             </div>
 
-            <div class="map-controls-toolbar">
-              <!-- 3 Year Mode Buttons on Map -->
-              <div class="segmented-control map-year-segmented" aria-label="เลือกโหมดปีของแผนที่">
-                <button type="button" class="map-year-btn" data-year="2022">ปี 2022</button>
-                <button type="button" class="map-year-btn" data-year="2023">ปี 2023</button>
-                <button type="button" class="map-year-btn active" data-year="compare">เปรียบเทียบ</button>
+            <div class="map-frame-wrapper map-frame-large">
+              <div id="overview-map-container" class="leaflet-map-box map-box-large"></div>
+
+              <!-- Mode Status Pill on Map -->
+              <div id="overview-map-mode-banner" class="map-mode-banner">
+                โหมดเปรียบเทียบ: สีแผนที่แสดงผลต่าง ปี 2023 เทียบกับ ปี 2022
               </div>
 
-              <!-- Metric Pills -->
-              <div class="card-pill-controls">
-                <button type="button" class="btn-swipe-metric active" data-metric="temp">อุณหภูมิ</button>
-                <button type="button" class="btn-swipe-metric" data-metric="humidity">ความชื้น</button>
-                <button type="button" class="btn-swipe-metric" data-metric="rainfall">ปริมาณฝน</button>
-                <button type="button" class="btn-swipe-metric" data-metric="hotspots">จุดความร้อน</button>
-              </div>
-
-              <!-- Station Marker Toggle -->
-              <button type="button" id="btn-toggle-map-stations" class="btn-station-toggle" title="เปิด/ปิดจุดสถานีตรวจวัดภูมิอากาศ 50 แห่งบนแผนที่">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                <span>แสดงสถานีตรวจวัด</span>
-              </button>
+              <!-- Docked Province Detail Panel -->
+              <aside id="overview-province-docked-panel" class="province-docked-panel" aria-label="รายละเอียดจังหวัดที่เลือก"></aside>
             </div>
           </div>
 
-          <div class="map-frame-wrapper map-frame-large">
-            <div id="overview-map-container" class="leaflet-map-box map-box-large"></div>
+          <!-- RIGHT COLUMN (~42%): Interactive Station Detail Panel (Ice Blue Glassmorphism) -->
+          <aside id="station-detail-panel" class="glass-card station-detail-panel-card" aria-label="รายละเอียดสถานีตรวจวัดที่เลือก">
+            <!-- Populated dynamically by renderStationDetailPanel() in js/pages/overview.js -->
+          </aside>
+        </div>
+      </section>
 
-            <!-- Mode Status Pill on Map -->
-            <div id="overview-map-mode-banner" class="map-mode-banner">
-              โหมดเปรียบเทียบ: สีแผนที่แสดงผลต่าง ปี 2023 เทียบกับ ปี 2022
+      <!-- SECTION 2B: DEDICATED STATION CHARTS & EXPANDABLE MONTHLY RECORDS (LONG-SCROLL) -->
+      <section id="station-charts-section" class="scroll-section station-charts-wrapper" aria-label="กราฟแนวโน้มและเปรียบเทียบปีของสถานีตรวจวัด">
+        <div class="glass-card full-width-section-card">
+          <div class="card-header-bar station-charts-header-bar">
+            <div class="title-with-info">
+              <div class="title-row-inline">
+                <span id="station-charts-code-badge" class="station-code-pill">ทุกสถานี (50 แห่ง)</span>
+                <h2 id="station-charts-title" class="card-title">กราฟแนวโน้มรายเดือนและเปรียบเทียบปี 2022–2023 รายสถานี</h2>
+              </div>
+              <p id="station-charts-subtitle" class="card-subtitle">คลิกจุดสถานีบนแผนที่ด้านบนเพื่อดูกราฟแนวโน้มรายเดือนและเปรียบเทียบปี 2022 กับ 2023 ของสถานีนั้น</p>
             </div>
 
-            <!-- Docked Province Detail Panel -->
-            <aside id="overview-province-docked-panel" class="province-docked-panel" aria-label="รายละเอียดจังหวัดที่เลือก"></aside>
+            <div id="station-chart-metric-pills" class="card-pill-controls" aria-label="เลือกตัวชี้วัดของกราฟสถานี">
+              <button type="button" class="station-chart-metric-btn active" data-station-metric="temp">อุณหภูมิ (°C)</button>
+              <button type="button" class="station-chart-metric-btn" data-station-metric="humidity">ความชื้น (%)</button>
+              <button type="button" class="station-chart-metric-btn" data-station-metric="rainfall">ปริมาณฝน (มม.)</button>
+              <button type="button" class="station-chart-metric-btn" data-station-metric="wind_speed">ความเร็วลม (ม./วิ)</button>
+            </div>
+          </div>
+
+          <!-- Empty State when no station is clicked yet -->
+          <div id="station-charts-empty-state" class="station-charts-empty-box">
+            <p>ยังไม่ได้เลือกสถานีตรวจวัด · คลิกจุดสถานีบนแผนที่ (หรือเลือกสถานีจากแผงด้านขวาของแผนที่) เพื่อแสดงกราฟแนวโน้มรายเดือนและกราฟเปรียบเทียบปี 2022 vs 2023 ของสถานีนั้น</p>
+          </div>
+
+          <!-- Active Station Charts Grid (Shown when previewStationId or stationId is active) -->
+          <div id="station-charts-active-body" class="station-charts-active-container" style="display:none;">
+            <div class="station-charts-grid-3">
+              <div class="station-subchart-box">
+                <h3 id="station-line-chart-heading" class="sub-chart-title">แนวโน้มรายเดือนของสถานี (ปี 2022 เทียบกับ ปี 2023)</h3>
+                <div class="chart-box-station">
+                  <canvas id="station-detail-trend-chart"></canvas>
+                </div>
+              </div>
+
+              <div class="station-subchart-box">
+                <h3 id="station-bar-chart-heading" class="sub-chart-title">เปรียบเทียบค่าตรวจวัดรายเดือน ปี 2022 กับ 2023</h3>
+                <div class="chart-box-station">
+                  <canvas id="station-detail-compare-chart"></canvas>
+                </div>
+              </div>
+
+              <div class="station-subchart-box">
+                <h3 id="station-secondary-chart-heading" class="sub-chart-title">ความชื้นสัมพัทธ์รายเดือน ปี 2022 กับ 2023 (%)</h3>
+                <div class="chart-box-station">
+                  <canvas id="station-detail-secondary-chart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div id="station-chart-takeaway" class="chart-plain-takeaway">
+              สรุปข้อมูลจริงของสถานี...
+            </div>
+
+            <!-- Section 3: Expandable Additional Station Details (12-Month Full Data Table) -->
+            <div class="station-expandable-records-block">
+              <div class="station-expandable-header">
+                <div>
+                  <strong>รายละเอียดข้อมูลตรวจวัดรายเดือนเพิ่มเติมของสถานีนี้ (ปี 2022–2023)</strong>
+                  <span class="card-subtitle" style="display:block;">แสดงค่าจริงรายเดือนครบทุกตัวแปร · เดือนที่ไม่มีการตรวจวัดแสดง "ไม่มีข้อมูล" (ไม่แทนค่าด้วย 0)</span>
+                </div>
+                <button type="button" id="btn-toggle-station-monthly-records" class="btn-collapsible-trigger" aria-expanded="false">
+                  <span>ดูตารางข้อมูลรายเดือนของสถานีนี้</span>
+                </button>
+              </div>
+              <div id="station-monthly-records-body" class="collapsible-table-wrapper">
+                <div id="station-monthly-records-table-container" class="matrix-scroll-wrapper"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -600,7 +735,7 @@
               </div>
               <p class="card-subtitle">แสดง 15 อันดับแรก · คลิกที่แท่งสถานีเพื่อกรองเฉพาะสถานีนั้น</p>
               <div id="pop-q2-station" class="info-popover-box" role="tooltip">
-                <strong>เปรียบเทียบรายสถานี (Q2):</strong> คำนวณค่าเฉลี่ยจากระเบียนรายเดือนของแต่ละสถานีภายใต้ช่วงเวลาและตัวกรองที่เลือก
+                <strong>เปรียบเทียบรายสถานี (Q2):</strong> คำนวณค่าเฉลี่ยจากข้อมูลรายเดือนของแต่ละสถานีภายใต้ช่วงเวลาและตัวกรองที่เลือก
               </div>
             </div>
           </div>
@@ -977,21 +1112,21 @@
           </div>
 
           <div class="glass-card sub-kpi-card">
-            <span class="kpi-title">ระเบียนภูมิอากาศรายสถานี–เดือน (HRDI)</span>
-            <div id="q5-hrdi-records-val" class="kpi-main-number" style="font-size: 1.65rem;">977 ระเบียน</div>
+            <span class="kpi-title">ข้อมูลภูมิอากาศรายสถานี–เดือน (HRDI)</span>
+            <div id="q5-hrdi-records-val" class="kpi-main-number" style="font-size: 1.65rem;">977 แถวข้อมูล</div>
             <div id="q5-hrdi-records-sub" class="kpi-sub-meta">ปี 2022 (12 เดือน) · ปี 2023 (ม.ค.–ก.ย. 9 เดือน)</div>
           </div>
 
           <div class="glass-card sub-kpi-card">
-            <span class="kpi-title">ระเบียนน้ำฝนระดับจังหวัด (HII)</span>
-            <div id="q5-hii-records-val" class="kpi-main-number" style="font-size: 1.65rem;">216 ระเบียน</div>
+            <span class="kpi-title">ข้อมูลน้ำฝนระดับจังหวัด (HII)</span>
+            <div id="q5-hii-records-val" class="kpi-main-number" style="font-size: 1.65rem;">216 แถวข้อมูล</div>
             <div id="q5-hii-records-sub" class="kpi-sub-meta">9 จังหวัด × 24 เดือน (ครบ 100%)</div>
           </div>
 
           <div class="glass-card sub-kpi-card">
             <span class="kpi-title">จุดความร้อนจากดาวเทียม (VIIRS)</span>
             <div id="q5-hotspot-records-val" class="kpi-main-number" style="font-size: 1.65rem;">106,036 รายการ</div>
-            <div id="q5-hotspot-records-sub" class="kpi-sub-meta">24 พาร์ทิชันรายเดือน (ม.ค. 2022 – ธ.ค. 2023)</div>
+            <div id="q5-hotspot-records-sub" class="kpi-sub-meta">24 ช่วงเวลารายเดือน (ม.ค. 2022 – ธ.ค. 2023)</div>
           </div>
         </div>
       </div>
@@ -1005,7 +1140,7 @@
                 <h2 class="card-title">ความครบถ้วนของข้อมูลแยกปีในแต่ละจังหวัดเป็นอย่างไร?</h2>
                 <button type="button" class="info-popover-btn" aria-label="ข้อมูลความครบถ้วนรายจังหวัด" data-popover-target="pop-q5-comp">i</button>
               </div>
-              <p class="card-subtitle">เปรียบเทียบจำนวนระเบียนที่มีการตรวจวัดจริง ปี 2022 (12 เดือน) กับ ปี 2023 (ม.ค.–ก.ย.) · คลิกจังหวัดเพื่อกรอง</p>
+              <p class="card-subtitle">เปรียบเทียบจำนวนข้อมูลรายเดือนที่มีการตรวจวัดจริง ปี 2022 (12 เดือน) กับ ปี 2023 (ม.ค.–ก.ย.) · คลิกจังหวัดเพื่อกรอง</p>
               <div id="pop-q5-comp" class="info-popover-box" role="tooltip">
                 <strong>ความครบถ้วนของข้อมูลสถานี:</strong> ปี 2022 มีข้อมูลครบ 12 เดือน ส่วนปี 2023 มีข้อมูลถึงเดือนกันยายน (9 เดือน)
               </div>
@@ -1017,7 +1152,7 @@
         </div>
       </div>
 
-      <!-- 3 & 4. จำนวนสถานีตามจังหวัด & จำนวนระเบียนตามแหล่งข้อมูล (Spacious 2-Column) -->
+      <!-- 3 & 4. จำนวนสถานีตามจังหวัด & จำนวนข้อมูลตามแหล่งสถานี (Spacious 2-Column) -->
       <div class="scroll-section">
         <div class="spacious-grid-2">
           <div class="glass-card">
@@ -1036,7 +1171,7 @@
             <div class="card-header-bar">
               <div class="title-with-info">
                 <div class="title-row-inline">
-                  <h2 class="card-title">จำนวนระเบียนตามแหล่งข้อมูลมาจากไหนบ้าง?</h2>
+                  <h2 class="card-title">จำนวนข้อมูลรายเดือนตามแหล่งสถานีมาจากไหนบ้าง?</h2>
                   <button type="button" class="info-popover-btn" aria-label="ข้อมูลแหล่งที่มาของสถานี" data-popover-target="pop-q5-src">i</button>
                 </div>
                 <p class="card-subtitle">คลิกที่แท่งกราฟเพื่อกรองเฉพาะ OpenWeatherMap หรือ HRDI Weather Station</p>
@@ -1090,7 +1225,7 @@
             <div class="gov-item">
               <h3>2. ข้อมูลปริมาณน้ำฝนระดับจังหวัด (HII)</h3>
               <p>
-                มาจากสถาบันสารสนเทศทรัพยากรน้ำ (องค์การมหาชน) ครอบคลุม 9 จังหวัดศึกษา ครบทั้ง 12 เดือนของปี 2022 และ 2023 (216 ระเบียน) เป็นค่าเฉลี่ยระดับจังหวัด จึงไม่เปลี่ยนแปลงตามตัวกรองระดับอำเภอ ตำบล สถานี หรือแหล่งสถานี (<code>source_type</code>) และไม่นำมาลบกับค่าฝนเฉพาะจุดของสถานี HRDI โดยตรง
+                มาจากสถาบันสารสนเทศทรัพยากรน้ำ (องค์การมหาชน) ครอบคลุม 9 จังหวัดศึกษา ครบทั้ง 12 เดือนของปี 2022 และ 2023 (216 แถวข้อมูล) เป็นค่าเฉลี่ยระดับจังหวัด จึงไม่เปลี่ยนแปลงตามตัวกรองระดับอำเภอ ตำบล สถานี หรือแหล่งสถานี (<code>source_type</code>) และไม่นำมาลบกับค่าฝนเฉพาะจุดของสถานี HRDI โดยตรง
               </p>
             </div>
             <div class="gov-item">

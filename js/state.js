@@ -13,7 +13,9 @@ const initialState = {
   province: null,               // Selected province or null (all 9 study provinces)
   district: null,               // Selected district or null
   tambon: null,                 // Selected subdistrict or null
-  stationId: null,              // Selected station ID or null
+  stationId: null,              // Selected station ID or null (Applied Global Filter)
+  previewStationId: null,       // Previewed station ID on map click before applying global filter
+  stationChartMetric: 'temp',   // 'temp' | 'humidity' | 'rainfall' | 'wind_speed' for Station Detail Charts
   weatherSource: 'all',         // 'all' | 'OpenWeatherMap' | 'HRDI Weather Station'
   metric: 'temp',               // 'temp' | 'rainfall' | 'humidity' | 'wind_speed' | 'temp_min' | 'temp_max'
   overviewMetricTab: 'temp',    // 'temp' | 'humidity' | 'rainfall' | 'hotspots'
@@ -80,6 +82,11 @@ export function setState(updates) {
     if (updates.stationId === undefined) nextState.stationId = null;
   }
 
+  // Sync previewStationId when stationId is explicitly set or cleared without explicit previewStationId
+  if (updates.stationId !== undefined && updates.previewStationId === undefined) {
+    nextState.previewStationId = updates.stationId;
+  }
+
   // When switching year mode, adjust default months if appropriate
   if (updates.yearMode && updates.yearMode !== oldState.yearMode) {
     if (updates.yearMode === 'compare') {
@@ -135,6 +142,8 @@ export function resetFilters() {
     district: null,
     tambon: null,
     stationId: null,
+    previewStationId: null,
+    stationChartMetric: 'temp',
     weatherSource: 'all',
     metric: 'temp',
     overviewMetricTab: 'temp',
