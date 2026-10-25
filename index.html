@@ -678,6 +678,7 @@
                   </svg>
                   <span>แสดงสถานีตรวจวัด</span>
                 </button>
+                <div id="overview-map-drilldown-bar" class="drilldown-action-bar"></div>
               </div>
             </div>
 
@@ -820,6 +821,7 @@
                 <button type="button" class="btn-toggle active" id="btn-province-rank-desc" data-sort="desc">มากไปน้อย (สูงสุด)</button>
                 <button type="button" class="btn-toggle" id="btn-province-rank-asc" data-sort="asc">น้อยไปมาก (ต่ำสุด)</button>
               </div>
+              <div id="overview-ranking-drilldown-bar" class="drilldown-action-bar"></div>
             </div>
           </div>
           <div class="chart-box-xl">
@@ -842,7 +844,9 @@
                 <strong>การกระจายตัวแบบ Box Plot (Q2):</strong> กล่องแสดงช่วงควอไทล์ที่ 1 ถึง 3 (Q1–Q3) เส้นขวางคือค่ามัธยฐาน (Median) จุดกลมคือค่าเฉลี่ย (Mean) และเส้นหนวดคือค่าต่ำสุด–สูงสุด (Min–Max)
               </div>
             </div>
+            <div id="overview-dist-drilldown-bar" class="drilldown-action-bar"></div>
           </div>
+          <div id="overview-dist-single-stat-banner" class="single-group-box-banner" style="display: none;"></div>
           <div class="chart-box-xl">
             <canvas id="overview-distribution-chart"></canvas>
           </div>
@@ -949,6 +953,7 @@
                 <strong>เปรียบเทียบรายสถานี (Q2):</strong> คำนวณค่าเฉลี่ยจากข้อมูลรายเดือนของแต่ละสถานีภายใต้ช่วงเวลาและตัวกรองที่เลือก
               </div>
             </div>
+            <div id="climate-ranking-drilldown-bar" class="drilldown-action-bar"></div>
           </div>
           <div class="chart-box-xxl">
             <canvas id="climate-station-ranking-chart"></canvas>
@@ -1087,6 +1092,7 @@
                 <button type="button" class="btn-toggle active" id="btn-district-rank-desc" data-sort="desc">มากไปน้อย</button>
                 <button type="button" class="btn-toggle" id="btn-district-rank-asc" data-sort="asc">น้อยไปมาก</button>
               </div>
+              <div id="hotspots-district-drilldown-bar" class="drilldown-action-bar"></div>
             </div>
           </div>
           <div class="chart-box-xl">
@@ -1178,6 +1184,7 @@
                 </div>
               </div>
               <span id="q6-r-badge" class="scope-info-pill">—</span>
+              <div id="q6-scatter-drilldown-bar" class="drilldown-action-bar"></div>
             </div>
             <div class="chart-box-xl">
               <canvas id="q6-rainfall-hotspots-scatter"></canvas>
@@ -1275,6 +1282,7 @@
                 <button type="button" class="btn-toggle active" id="btn-thresh-median" data-threshold="median">เกณฑ์มัธยฐาน (≤ Median ฝน, ≥ Median จุด)</button>
                 <button type="button" class="btn-toggle" id="btn-thresh-quartile" data-threshold="quartile">เกณฑ์ควอไทล์ (≤ Q1 ฝน, ≥ Q3 จุด)</button>
               </div>
+              <div id="low-rain-drilldown-bar" class="drilldown-action-bar"></div>
             </div>
           </div>
 
@@ -1310,6 +1318,7 @@
                 <strong>กฎความปลอดภัยของข้อมูล (<code>rainfall_comparable = false</code>):</strong> ฝน HRDI เป็นค่าตรวจวัดเฉพาะจุดสถานีบนพื้นที่สูง (มม./สถานี-เดือน) ส่วนฝน HII เป็นค่าเฉลี่ยระดับจังหวัด (มม./จังหวัด-เดือน) จึงแสดงควบคู่กันเพื่อเปรียบเทียบรูปแบบฤดูกาลเท่านั้น
               </div>
             </div>
+            <div id="rainfall-comp-drilldown-bar" class="drilldown-action-bar" style="margin-bottom: 0.5rem;"></div>
             <div class="rainfall-dual-kpi-pills">
               <div class="mini-stat-box">
                 <span>ฝนสถานีศึกษา HRDI:</span>

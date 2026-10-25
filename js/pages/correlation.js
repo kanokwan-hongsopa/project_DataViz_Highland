@@ -35,6 +35,7 @@ import {
   THAI_MONTH_NAMES,
   YEAR_COLORS
 } from '../charts.js';
+import { renderDrilldownBar } from '../drilldown.js';
 
 /**
  * Initialize or update Page 4 (Q4): Correlation & Cross-Dataset Comparison
@@ -54,6 +55,7 @@ export function renderCorrelationPage() {
 
   // 2. Scatter Plot: Rainfall vs Nearby Hotspots (Q6)
   renderRainfallVsHotspotsScatter(state, filteredRecords, proximityField, proximityLabel);
+  renderDrilldownBar('q6-scatter-drilldown-bar');
 
   // 3. Scatter Plot: Temperature vs Nearby Hotspots (Q7a)
   renderTempVsHotspotsScatter(state, filteredRecords, proximityField, proximityLabel);
@@ -66,9 +68,11 @@ export function renderCorrelationPage() {
 
   // 5.5 Low Rainfall / High Hotspot Explorer (Quadrant Analysis)
   renderLowRainHighHotspotExplorer(state, filteredRecords, proximityField, proximityLabel);
+  renderDrilldownBar('low-rain-drilldown-bar');
 
   // 6. Cross-Dataset Rainfall Comparison: HRDI Station vs HII Province (Q3 & Q4)
   renderCrossRainfallSection(state);
+  renderDrilldownBar('rainfall-comp-drilldown-bar');
 
   // 7. Render Dynamic Key Insights (Q4)
   renderCorrelationInsights(state, filteredRecords, proximityField);
@@ -126,13 +130,20 @@ function handleScatterPointClick(state, points, elements) {
   const el = elements[0];
   const pt = el.element?.$context?.raw || points[el.index];
   if (pt && pt.stationId) {
-    const isSame = state.stationId === pt.stationId;
-    setState({
-      stationId: isSame ? null : pt.stationId,
-      province: pt.province,
-      yearMode: String(pt.year),
-      selectedMonths: [pt.month]
-    });
+    const isSame = state.stationId === pt.stationId && state.province === pt.province;
+    if (isSame) {
+      setState({
+        stationId: null,
+        province: null
+      });
+    } else {
+      setState({
+        stationId: pt.stationId,
+        province: pt.province,
+        yearMode: String(pt.year),
+        selectedMonths: [pt.month]
+      });
+    }
   }
 }
 

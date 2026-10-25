@@ -23,6 +23,7 @@ import {
 } from './filters.js';
 import { THAI_MONTH_NAMES, FULL_THAI_MONTH_NAMES, resizeAllCharts } from './charts.js';
 import { invalidateAllMaps } from './maps.js';
+import './drilldown.js';
 
 // Page Renderers (Q1–Q5)
 import { renderOverviewPage } from './pages/overview.js';

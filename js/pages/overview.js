@@ -46,6 +46,7 @@ import {
   animateKpiValue,
   prefersReducedMotion
 } from '../animations.js';
+import { renderDrilldownBar } from '../drilldown.js';
 
 let overviewMap = null;
 let currentGeoLayer = null;
@@ -141,6 +142,11 @@ export function renderOverviewPage() {
 
   // 6. Render Box Plot Distribution Chart (Min, Q1, Median, Q3, Max, Mean, N)
   renderOverviewDistributionChart(state, hrdiAll);
+
+  // 6B. Render Drill-down Action Bars & Breadcrumbs on interactive cards
+  renderDrilldownBar('overview-map-drilldown-bar');
+  renderDrilldownBar('overview-ranking-drilldown-bar');
+  renderDrilldownBar('overview-dist-drilldown-bar');
 
   // 7. Render Dynamic Key Insights (สิ่งที่น่าสนใจ)
   renderOverviewKeyInsights(state, hrdi2022, hrdi2023, hrdiAll, hotspots2022, hotspots2023, hotspotTotal);
@@ -1695,17 +1701,23 @@ function renderOverviewDistributionChart(state, hrdiAll) {
   const metricLabel = field === 'humidity' ? 'ความชื้นสัมพัทธ์' : field === 'rainfall' ? 'ปริมาณน้ำฝนสถานี' : 'อุณหภูมิเฉลี่ย';
 
   const distSubEl = document.getElementById('overview-distribution-subtitle');
+  const singleBanner = document.getElementById('overview-dist-single-stat-banner');
 
   if (state.province) {
+    // When a province is selected, retrieve records for all stations in this province (clearing stationId to preserve sibling stations)
+    const stateProvOnly = { ...state, district: null, tambon: null, stationId: null };
+    const provRows = filterStationMonthRecords(db.hrdiStationMonth, stateProvOnly);
     const stationsInProv = getAvailableStations(state.province, state.district, state.tambon, state.weatherSource);
     const boxStats = stationsInProv.map(s => {
-      const stRecords = hrdiAll.filter(r => r.station_id === s.station_id);
+      const stRecords = provRows.filter(r => r.station_id === s.station_id);
       const q = calculateQuartiles(stRecords, field);
-      const shortName = s.station_name.replace(/^สถานี/, '').trim().slice(0, 14);
+      const shortName = s.station_name.replace(/^สถานี(ตรวจวัดสภาพอากาศ)?/, '').trim();
       return {
         label: shortName,
+        fullName: s.station_name,
         key: s.station_id,
         type: 'station',
+        sourceType: s.source_type,
         province: s.province,
         district: s.district,
         tambon: s.tambon,
@@ -1714,24 +1726,76 @@ function renderOverviewDistributionChart(state, hrdiAll) {
       };
     }).filter(b => b.count > 0);
 
+    if (boxStats.length === 1 && singleBanner) {
+      const s0 = boxStats[0];
+      singleBanner.innerHTML = `
+        <div class="single-box-top-row">
+          <div class="single-box-station-info">
+            <span class="single-box-name">${s0.fullName || s0.label}</span>
+            <span class="single-box-badge">${s0.sourceType || 'HRDI'}</span>
+            <span class="single-box-sample">จ.${s0.province} · ข้อมูลที่ใช้ N = ${s0.count} แถว (ปี 2022–2023)</span>
+          </div>
+        </div>
+        <div class="single-stat-metric-grid">
+          <div class="single-stat-pill">
+            <span class="single-stat-label">ต่ำสุด (Min)</span>
+            <strong class="single-stat-val">${formatNum(s0.min, 1)} ${unit}</strong>
+          </div>
+          <div class="single-stat-pill">
+            <span class="single-stat-label">ควอไทล์ที่ 1 (Q1)</span>
+            <strong class="single-stat-val">${formatNum(s0.q1, 1)} ${unit}</strong>
+          </div>
+          <div class="single-stat-pill pill-accent">
+            <span class="single-stat-label">มัธยฐาน (Median)</span>
+            <strong class="single-stat-val">${formatNum(s0.median, 1)} ${unit}</strong>
+          </div>
+          <div class="single-stat-pill pill-mean">
+            <span class="single-stat-label">ค่าเฉลี่ย (Mean)</span>
+            <strong class="single-stat-val">${formatNum(s0.mean, 1)} ${unit}</strong>
+          </div>
+          <div class="single-stat-pill">
+            <span class="single-stat-label">ควอไทล์ที่ 3 (Q3)</span>
+            <strong class="single-stat-val">${formatNum(s0.q3, 1)} ${unit}</strong>
+          </div>
+          <div class="single-stat-pill">
+            <span class="single-stat-label">สูงสุด (Max)</span>
+            <strong class="single-stat-val">${formatNum(s0.max, 1)} ${unit}</strong>
+          </div>
+        </div>
+      `;
+      singleBanner.style.display = 'block';
+    } else if (singleBanner) {
+      singleBanner.style.display = 'none';
+    }
+
     if (distSubEl) {
-      distSubEl.textContent = `ช่วงค่าต่ำสุด–สูงสุดและค่ากลางของสถานีใน จ.${state.province} (${unit}) — คลิกเพื่อเลือกสถานี`;
+      if (boxStats.length === 1) {
+        distSubEl.textContent = `ค่าสถิติการกระจายตัวของ ${boxStats[0].label} (จ.${state.province}) · กด "← กลับสู่ภาพรวม" เพื่อดู 9 จังหวัด`;
+      } else {
+        const activeName = boxStats.find(b => b.isSelected)?.label;
+        const noteActive = activeName ? `เน้นสถานี ${activeName} (คลิกซ้ำเพื่อยกเลิก)` : 'คลิกสถานีเพื่อเน้นหรือเจาะลึก';
+        distSubEl.textContent = `ช่วงค่าต่ำสุด–สูงสุดและค่ากลางของสถานีตรวจวัด ${boxStats.length} แห่งใน จ.${state.province} (${unit}) — ${noteActive}`;
+      }
     }
 
     renderBoxPlotChart('overview-distribution-chart', boxStats, {
       unit,
       metricLabel,
       decimals: 1,
+      singleGroup: boxStats.length === 1,
       onSelectGroup: (item) => {
+        const isSame = state.stationId === item.key;
         setState({
-          stationId: state.stationId === item.key ? null : item.key,
+          stationId: isSame ? null : item.key,
           province: item.province,
-          district: item.district,
-          tambon: item.tambon
+          district: isSame ? state.district : item.district,
+          tambon: isSame ? state.tambon : item.tambon
         });
       }
     });
   } else {
+    if (singleBanner) singleBanner.style.display = 'none';
+
     const stateAllProv = { ...state, province: null, district: null, tambon: null, stationId: null };
     const rows = filterStationMonthRecords(db.hrdiStationMonth, stateAllProv);
 
@@ -1748,13 +1812,14 @@ function renderOverviewDistributionChart(state, hrdiAll) {
     }).filter(b => b.count > 0);
 
     if (distSubEl) {
-      distSubEl.textContent = `ช่วงค่าต่ำสุด–สูงสุดและค่ากลางรายจังหวัด (${unit}) — คลิกเพื่อกรองจังหวัด`;
+      distSubEl.textContent = `ช่วงค่าต่ำสุด–สูงสุด ค่ากลาง (Median) และค่าเฉลี่ยรายจังหวัด (${unit}) — คลิกแท่งจังหวัดเพื่อเจาะลึกสถานี`;
     }
 
     renderBoxPlotChart('overview-distribution-chart', boxStats, {
       unit,
       metricLabel,
       decimals: 1,
+      singleGroup: false,
       onSelectGroup: (item) => {
         setState({ province: state.province === item.key ? null : item.key });
       }

@@ -25,6 +25,7 @@ import {
   YEAR_COLORS
 } from '../charts.js';
 import { animateKpiValue } from '../animations.js';
+import { renderDrilldownBar } from '../drilldown.js';
 
 export const METRIC_CONFIG = {
   temp: { label: 'อุณหภูมิเฉลี่ย', unit: '°C', decimals: 1 },
@@ -63,6 +64,7 @@ export function renderClimatePage() {
 
   // 3. Render Station Ranking Bar Chart (Q2) with Click-to-Select Station
   renderClimateStationRanking(state, hrdiAll, metric, metricCfg);
+  renderDrilldownBar('climate-ranking-drilldown-bar');
 
   // 4. Render Seasonal Rainfall & Climate Pattern Chart (Q1 & Q3)
   renderSeasonalPatternChart(state);

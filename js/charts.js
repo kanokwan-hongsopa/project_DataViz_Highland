@@ -577,6 +577,8 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
     ? (globalMax - globalMin) * 0.14
     : 2;
 
+  const isSingleGroup = Boolean(customOptions.singleGroup) || validItems.length === 1;
+
   // Store latest statsList on canvas so the plugin always reads fresh quartile data during in-place updates
   canvas._boxPlotStatsList = statsList;
 
@@ -594,8 +596,8 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
         if (!s || s.count === 0 || s.median === null) return;
 
         const x = bar.x;
-        const barWidth = Math.min(bar.width || 22, 28);
-        const capHalf = Math.max(4, barWidth * 0.32);
+        const barWidth = isSingleGroup ? Math.min(bar.width || 48, 54) : Math.min(bar.width || 22, 28);
+        const capHalf = isSingleGroup ? 16 : Math.max(4, barWidth * 0.32);
 
         const yMin = y.getPixelForValue(s.min);
         const yQ1 = y.getPixelForValue(s.q1);
@@ -738,7 +740,9 @@ export function renderBoxPlotChart(canvasId, statsList = [], customOptions = {})
         borderWidth: 1.8,
         borderRadius: 4,
         borderSkipped: false,
-        barPercentage: 0.55
+        barPercentage: isSingleGroup ? 0.35 : 0.55,
+        maxBarThickness: isSingleGroup ? 58 : 36,
+        barThickness: isSingleGroup ? 52 : undefined
       }
     ]
   };

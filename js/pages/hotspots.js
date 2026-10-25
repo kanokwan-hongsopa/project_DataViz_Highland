@@ -32,6 +32,7 @@ import {
   YEAR_COLORS
 } from '../charts.js';
 import { animateKpiValue } from '../animations.js';
+import { renderDrilldownBar } from '../drilldown.js';
 
 let hotspotMap = null;
 let currentBaseGeoLayer = null;
@@ -63,6 +64,7 @@ export async function renderHotspotsPage() {
 
   // 4. Render District Drilldown Ranking (Interactive click-to-filter)
   renderHotspotDistrictRanking(state);
+  renderDrilldownBar('hotspots-district-drilldown-bar');
 
   // 5. Render Dynamic Key Insights (Q3)
   renderHotspotInsights(state, count2022, count2023, totalCount);
